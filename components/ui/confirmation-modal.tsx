@@ -1,23 +1,24 @@
 'use client';
 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { AlertTriangle, Crown, Pause, Play, Shield, UserX } from 'lucide-react';
+import { AlertTriangle, Crown, Pause, Play, Shield, UserCheck, UserX } from 'lucide-react';
 
 import type React from 'react';
 
 interface ConfirmationModalProps {
   trigger: React.ReactNode;
   title: string;
-  description: string;
+  description: React.ReactNode;
   confirmText: string;
   onConfirm: () => void;
   variant?: 'default' | 'destructive';
   icon?: React.ReactNode;
+  disabled?: boolean;
 }
-export function ConfirmationModal({ trigger, title, description, confirmText, onConfirm, variant = 'default', icon }: ConfirmationModalProps) {
+export function ConfirmationModal({ trigger, title, description, confirmText, onConfirm, variant = 'default', icon, disabled }: ConfirmationModalProps) {
   return (
     <AlertDialog>
-      <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
+      <AlertDialogTrigger asChild disabled={disabled}>{trigger}</AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
           <div className="flex items-center gap-3">
@@ -38,10 +39,10 @@ export function ConfirmationModal({ trigger, title, description, confirmText, on
     </AlertDialog>
   );
 }
-export function EmergencyConfirmationModal({ trigger, title, description, onConfirm }: { trigger: React.ReactNode; title: string; description: string; onConfirm: () => void }) {
-  return <ConfirmationModal trigger={trigger} title={title} description={`${description} This action cannot be undone and requires immediate attention.`} confirmText="Execute Emergency Action" onConfirm={onConfirm} variant="destructive" icon={<AlertTriangle className="h-5 w-5" />} />;
+export function EmergencyConfirmationModal({ trigger, title, description, onConfirm, disabled }: { trigger: React.ReactNode; title: string; description: string; onConfirm: () => void; disabled?: boolean }) {
+  return <ConfirmationModal trigger={trigger} title={title} description={`${description} This action cannot be undone and requires immediate attention.`} confirmText="Execute Emergency Action" onConfirm={onConfirm} variant="destructive" icon={<AlertTriangle className="h-5 w-5" />} disabled={disabled} />;
 }
-export function UserActionConfirmationModal({ trigger, action, userAddress, onConfirm }: { trigger: React.ReactNode; action: 'freeze' | 'unfreeze' | 'whitelist' | 'remove-whitelist' | 'change-tier'; userAddress: string; onConfirm: () => void }) {
+export function UserActionConfirmationModal({ trigger, action, userAddress, onConfirm }: { trigger: React.ReactNode; action: 'freeze' | 'unfreeze' | 'whitelist' | 'remove-whitelist' | 'blacklist' | 'remove-blacklist' | 'change-tier'; userAddress: string; onConfirm: () => void }) {
   const getActionDetails = () => {
     switch (action) {
       case 'freeze':
@@ -83,6 +84,22 @@ export function UserActionConfirmationModal({ trigger, action, userAddress, onCo
           confirmText: 'Change Tier',
           variant: 'default' as const,
           icon: <Crown className="h-5 w-5" />
+        };
+      case 'blacklist':
+        return {
+          title: 'Blacklist User',
+          description: `Are you sure you want to blacklist ${userAddress}? This user will be denied access to all platform functions.`,
+          confirmText: 'Blacklist User',
+          variant: 'destructive' as const,
+          icon: <UserX className="h-5 w-5" />
+        };
+      case 'remove-blacklist':
+        return {
+          title: 'Remove User from Blacklist',
+          description: `Are you sure you want to remove ${userAddress} from the blacklist? This user will be able to use the platform again.`,
+          confirmText: 'Remove from Blacklist',
+          variant: 'default' as const,
+          icon: <UserCheck className="h-5 w-5" />
         };
       default:
         return {

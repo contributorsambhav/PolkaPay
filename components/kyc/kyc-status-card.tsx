@@ -10,17 +10,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
+import { getContractAddress, CHAIN_ID } from '@/lib/constants';
 
 const SYMBOL = process.env.NEXT_PUBLIC_SYMBOL;
 
 const REMITTANCE_ABI = parseAbi(['function getUserInfo(address user) external view returns (uint8 tier, uint256 dailyLimit, uint256 todayUsed, uint256 balance, bool isWhitelistedUser, bool isBlacklistedUser, bool isFrozenUser, uint8 kycStatus)', 'function getKYCRequest(address user) external view returns (string memory documentHash, uint256 timestamp, uint8 status, string memory rejectionReason)', 'function getKYCStatus(address user) external view returns (uint8)']);
-const getContractAddress = (): `0x${string}` | undefined => {
-  const address = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
-  if (!address || !address.startsWith('0x') || address.length !== 42) {
-    return undefined;
-  }
-  return address as `0x${string}`;
-};
 const KYCStatus = {
   0: 'NONE',
   1: 'PENDING',
@@ -45,7 +39,6 @@ export function KYCStatusCard() {
       toast.error('Contract address not configured properly');
     }
   }, []);
-  const CORRECT_CHAIN_ID = 420420417;
 
   const {
     data: userInfo,
@@ -59,7 +52,7 @@ export function KYCStatusCard() {
     functionName: 'getUserInfo',
     args: [address!],
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && !!address && isConnected
     }
@@ -76,7 +69,7 @@ export function KYCStatusCard() {
     functionName: 'getKYCRequest',
     args: [address!],
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && !!address && isConnected
     }

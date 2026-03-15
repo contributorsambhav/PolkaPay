@@ -1,13 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: true
   },
   images: {
-    unoptimized: true,
+    unoptimized: true
   },
-}
+  experimental: {
+    optimizePackageImports: ['@phosphor-icons/react'],
+  },
+};
+
 export default nextConfig

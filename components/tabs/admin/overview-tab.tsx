@@ -1,7 +1,16 @@
 'use client';
 
-import { Activity, AlertTriangle, FileCheck, RefreshCw, Settings, TrendingUp, Users } from 'lucide-react';
+import {
+  ChartLineUpIcon,
+  WarningIcon,
+  SealCheckIcon,
+  ArrowClockwiseIcon,
+  GearIcon,
+  TrendUpIcon,
+  UsersIcon,
+} from '@phosphor-icons/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { StatCard } from '@/components/ui/stat-card';
 import { formatEther, parseAbi } from 'viem';
 import { useAccount, useReadContract, useWatchContractEvent, useWriteContract } from 'wagmi';
 import { useEffect, useState } from 'react';
@@ -10,30 +19,15 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
+import { getContractAddress, CHAIN_ID } from '@/lib/constants';
 
 interface OverviewTabProps {
-  onTabChange: (tab: string) => void;
+  onTabChange: (tab: 'overview' | 'kyc' | 'users' | 'transactions' | 'settings') => void;
 }
 
 const REMITTANCE_ABI = parseAbi(['function getPendingKYC() external view returns (address[] memory)', 'function getContractBalance() external view returns (uint256)', 'function owner() external view returns (address)', 'function paused() external view returns (bool)', 'function getTierLimit(uint8 tier) external view returns (uint256)', 'function pause() external', 'function unpause() external', 'event KYCRequested(address indexed user, string documentHash, uint256 timestamp)', 'event KYCApproved(address indexed user, uint256 timestamp)', 'event KYCRejected(address indexed user, string reason, uint256 timestamp)', 'event KYCDocumentUpdated(address indexed user, string oldHash, string newHash, uint256 timestamp)', 'event Sent(address indexed sender, address indexed recipient, uint256 amount)', 'event Claimed(address indexed recipient, uint256 amount)', 'event Frozen(address indexed recipient, bool frozen)', 'event TierUpdated(address indexed user, uint8 newTier)', 'event UserWhitelisted(address indexed user, bool status)', 'event UserBlacklisted(address indexed user, bool status)', 'event Paused(address account)', 'event Unpaused(address account)']);
 
-// Environment variables
-const CHAIN_ID = process.env.NEXT_PUBLIC_CHAIN_ID;
 const NETWORK_NAME = process.env.NEXT_PUBLIC_NETWORK_NAME;
-
-const getContractAddress = (): `0x${string}` | undefined => {
-  const address = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
-  console.log('🔍 Contract Address from env:', address);
-  if (!address) {
-    console.error('❌ NEXT_PUBLIC_CONTRACT_ADDRESS not found in environment');
-    return undefined;
-  }
-  if (!address.startsWith('0x') || address.length !== 42) {
-    console.error('❌ Invalid contract address format:', address);
-    return undefined;
-  }
-  return address as `0x${string}`;
-};
 const SYMBOL = process.env.NEXT_PUBLIC_SYMBOL;
 
 export function OverviewTab({ onTabChange }: OverviewTabProps) {
@@ -62,7 +56,6 @@ export function OverviewTab({ onTabChange }: OverviewTabProps) {
       setIsLoading(false);
     }
   }, []);
-  const CORRECT_CHAIN_ID = 420420417;
 
   const {
     data: pendingKYC,
@@ -75,7 +68,7 @@ export function OverviewTab({ onTabChange }: OverviewTabProps) {
     abi: REMITTANCE_ABI,
     functionName: 'getPendingKYC',
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isConnected
     }
@@ -91,7 +84,7 @@ export function OverviewTab({ onTabChange }: OverviewTabProps) {
     abi: REMITTANCE_ABI,
     functionName: 'getContractBalance',
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isConnected
     }
@@ -105,7 +98,7 @@ export function OverviewTab({ onTabChange }: OverviewTabProps) {
     abi: REMITTANCE_ABI,
     functionName: 'owner',
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isConnected
     }
@@ -120,7 +113,7 @@ export function OverviewTab({ onTabChange }: OverviewTabProps) {
     abi: REMITTANCE_ABI,
     functionName: 'paused',
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isConnected
     }
@@ -284,7 +277,7 @@ export function OverviewTab({ onTabChange }: OverviewTabProps) {
         address: contractAddress,
         abi: REMITTANCE_ABI,
         functionName,
-        chainId: CORRECT_CHAIN_ID
+        chainId: CHAIN_ID
       });
       console.log('✅ Transaction submitted:', hash);
       toast.success(`Transaction submitted: ${hash}`);
@@ -311,9 +304,9 @@ export function OverviewTab({ onTabChange }: OverviewTabProps) {
   });
   if (!isConnected) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex min-h-[16rem] items-center justify-center p-4">
         <div className="text-center">
-          <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+          <WarningIcon className="mx-auto mb-4 h-12 w-12 text-warning" size={48} />
           <h3 className="text-lg font-semibold">Wallet Not Connected</h3>
           <p className="text-muted-foreground">Please connect your wallet to view admin data</p>
         </div>
@@ -322,30 +315,29 @@ export function OverviewTab({ onTabChange }: OverviewTabProps) {
   }
   if (!contractAddress) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex min-h-[16rem] items-center justify-center p-4">
         <div className="text-center">
-          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <WarningIcon className="mx-auto mb-4 h-12 w-12 text-destructive" size={48} />
           <h3 className="text-lg font-semibold">Configuration Error</h3>
           <p className="text-muted-foreground">Contract address not properly configured</p>
-          <p className="text-xs text-muted-foreground mt-2">Check NEXT_PUBLIC_CONTRACT_ADDRESS environment variable</p>
+          <p className="mt-2 text-xs text-muted-foreground">Check NEXT_PUBLIC_CONTRACT_ADDRESS</p>
         </div>
       </div>
     );
   }
   return (
-    <div className="space-y-6">
-      {/* Header with refresh button */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Admin Overview</h2>
-        <div className="flex items-center gap-4">
+    <div className="min-w-0 space-y-6">
+      <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <h2 className="text-xl font-bold sm:text-2xl">Admin Overview</h2>
+        <div className="flex flex-wrap items-center gap-2">
           {isPaused && (
-            <Badge variant="destructive" className="flex items-center gap-1">
-              <AlertTriangle className="h-3 w-3" />
+            <Badge variant="destructive" className="flex w-fit items-center gap-1">
+              <WarningIcon className="h-3 w-3" size={12} />
               Contract Paused
             </Badge>
           )}
           <Button variant="outline" size="sm" onClick={refreshData} disabled={isLoading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            <ArrowClockwiseIcon className={`mr-2 h-4 w-4 shrink-0 ${isLoading ? 'animate-spin' : ''}`} size={16} />
             Refresh
           </Button>
           <Button variant={isPaused ? 'default' : 'destructive'} size="sm" onClick={handlePauseToggle} disabled={!isConnected || !contractAddress}>
@@ -353,136 +345,142 @@ export function OverviewTab({ onTabChange }: OverviewTabProps) {
           </Button>
         </div>
       </div>
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Contract Balance</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {isLoading || loadingBalance ? (
+
+      <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <StatCard
+          title="Contract Balance"
+          icon={<TrendUpIcon className="h-4 w-4" size={16} />}
+          subtitle="Total contract funds"
+          value={
+            isLoading || loadingBalance ? (
               <Skeleton className="h-8 w-24" />
             ) : hasErrorBalance ? (
-              <div className="text-sm text-red-500">Error loading balance</div>
+              <span className="text-sm text-destructive">Error loading balance</span>
             ) : (
-              <div className="text-2xl font-bold">
+              <span className="text-xl font-bold tabular-nums sm:text-2xl">
                 {parseFloat(stats.contractBalance).toFixed(4)} {SYMBOL}
-              </div>
-            )}
-            <p className="text-xs text-muted-foreground">Total contract funds</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending KYC</CardTitle>
-            <FileCheck className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {isLoading || loadingKYC ? <Skeleton className="h-8 w-16" /> : hasErrorKYC ? <div className="text-sm text-red-500">Error loading KYC</div> : <div className="text-2xl font-bold">{stats.pendingKYC}</div>}
-            <p className="text-xs text-muted-foreground">Awaiting review</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">System Status</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{hasErrorPaused ? <Badge variant="secondary">Unknown</Badge> : <Badge variant={isPaused ? 'destructive' : 'default'}>{isPaused ? 'Paused' : 'Active'}</Badge>}</div>
-            <p className="text-xs text-muted-foreground">Contract status</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Contract Owner</CardTitle>
-            <Settings className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xs font-mono break-all">{hasErrorOwner ? <div className="text-red-500">Error loading owner</div> : contractOwner || 'Loading...'}</div>
-            <p className="text-xs text-muted-foreground">Owner address</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Network</CardTitle>
-            <Settings className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{NETWORK_NAME}</div>
-            <p className="text-xs text-muted-foreground">Chain ID: {CHAIN_ID}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Contract Address</CardTitle>
-            <Settings className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xs font-mono break-all">{contractAddress}</div>
-            <p className="text-xs text-muted-foreground">Deployment address</p>
-          </CardContent>
-        </Card>
+              </span>
+            )
+          }
+          valueClassName="text-foreground"
+        />
+        <StatCard
+          title="Pending KYC"
+          icon={<SealCheckIcon className="h-4 w-4" size={16} />}
+          subtitle="Awaiting review"
+          value={
+            isLoading || loadingKYC ? (
+              <Skeleton className="h-8 w-16" />
+            ) : hasErrorKYC ? (
+              <span className="text-sm text-destructive">Error loading KYC</span>
+            ) : (
+              <span className="text-xl font-bold tabular-nums sm:text-2xl">{stats.pendingKYC}</span>
+            )
+          }
+        />
+        <StatCard
+          title="System Status"
+          icon={<ChartLineUpIcon className="h-4 w-4" size={16} />}
+          subtitle="Contract status"
+          value={
+            hasErrorPaused ? (
+              <Badge variant="secondary">Unknown</Badge>
+            ) : (
+              <Badge variant={isPaused ? 'destructive' : 'default'}>{isPaused ? 'Paused' : 'Active'}</Badge>
+            )
+          }
+        />
+        <StatCard
+          title="Contract Owner"
+          icon={<GearIcon className="h-4 w-4" size={16} />}
+          subtitle="Owner address"
+          value={
+            hasErrorOwner ? (
+              <span className="text-sm text-destructive">Error loading owner</span>
+            ) : (
+              <span className="break-all font-mono text-xs text-foreground">{contractOwner || 'Loading...'}</span>
+            )
+          }
+          valueClassName="break-all font-mono text-xs"
+        />
+        <StatCard
+          title="Network"
+          icon={<GearIcon className="h-4 w-4" size={16} />}
+          subtitle={`Chain ID: ${CHAIN_ID}`}
+          value={<span className="text-xl font-bold sm:text-2xl">{NETWORK_NAME ?? '—'}</span>}
+        />
+        <StatCard
+          title="Contract Address"
+          icon={<GearIcon className="h-4 w-4" size={16} />}
+          subtitle="Deployment address"
+          value={<span className="break-all font-mono text-xs text-foreground">{contractAddress}</span>}
+          valueClassName="break-all font-mono text-xs"
+        />
       </div>
-      {/* Quick Actions */}
-      <Card>
+
+      <Card className="min-w-0">
         <CardHeader>
           <CardTitle>Quick Actions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Button className="h-20 flex-col gap-2" onClick={() => onTabChange('kyc')} disabled={stats.pendingKYC === 0}>
-              <FileCheck className="h-6 w-6" />
-              Review KYC
+          <div className="grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-4">
+            <Button className="h-auto min-h-[4rem] flex-col gap-2 py-3" onClick={() => onTabChange('kyc')} disabled={stats.pendingKYC === 0}>
+              <SealCheckIcon className="h-5 w-5 shrink-0 sm:h-6 sm:w-6" size={24} />
+              <span className="text-center text-xs sm:text-sm">Review KYC</span>
               {stats.pendingKYC > 0 && (
                 <Badge variant="destructive" className="text-xs">
                   {stats.pendingKYC}
                 </Badge>
               )}
             </Button>
-            <Button variant="outline" className="h-20 flex-col gap-2 bg-transparent" onClick={() => onTabChange('users')}>
-              <Users className="h-6 w-6" />
-              Manage Users
+            <Button variant="outline" className="h-auto min-h-[4rem] flex-col gap-2 py-3" onClick={() => onTabChange('users')}>
+              <UsersIcon className="h-5 w-5 shrink-0 sm:h-6 sm:w-6" size={24} />
+              <span className="text-center text-xs sm:text-sm">Manage Users</span>
             </Button>
-            <Button variant="outline" className="h-20 flex-col gap-2 bg-transparent" onClick={() => onTabChange('transactions')}>
-              <TrendingUp className="h-6 w-6" />
-              View Transactions
+            <Button variant="outline" className="h-auto min-h-[4rem] flex-col gap-2 py-3" onClick={() => onTabChange('transactions')}>
+              <TrendUpIcon className="h-5 w-5 shrink-0 sm:h-6 sm:w-6" size={24} />
+              <span className="text-center text-xs sm:text-sm">View Transactions</span>
             </Button>
-            <Button variant="outline" className="h-20 flex-col gap-2 bg-transparent" onClick={() => onTabChange('settings')}>
-              <Settings className="h-6 w-6" />
-              System Settings
+            <Button variant="outline" className="h-auto min-h-[4rem] flex-col gap-2 py-3" onClick={() => onTabChange('settings')}>
+              <GearIcon className="h-5 w-5 shrink-0 sm:h-6 sm:w-6" size={24} />
+              <span className="text-center text-xs sm:text-sm">System Settings</span>
             </Button>
           </div>
         </CardContent>
       </Card>
-      {/* Recent Activity */}
-      <Card>
+
+      <Card className="min-w-0">
         <CardHeader>
           <CardTitle>Recent Activity</CardTitle>
         </CardHeader>
         <CardContent>
           {recentEvents.length > 0 ? (
-            <div className="space-y-4">
+            <div className="space-y-2 overflow-hidden">
               {recentEvents.map((event, index) => (
-                <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Activity className="h-8 w-8 text-blue-500" />
-                    <div>
-                      <p className="font-medium">{event.type}</p>
-                      <p className="text-sm text-muted-foreground">Block: {event.blockNumber?.toString()}</p>
+                <div
+                  key={index}
+                  className="flex min-w-0 flex-col gap-2 rounded-xl border border-border bg-card px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <ChartLineUpIcon className="h-4 w-4 sm:h-5 sm:w-5" size={20} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-foreground">{event.type}</p>
+                      <p className="text-xs text-muted-foreground sm:text-sm">Block: {event.blockNumber?.toString()}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm text-muted-foreground">{event.transactionHash?.slice(0, 10)}...</p>
-                  </div>
+                  <p className="truncate font-mono text-xs text-muted-foreground sm:text-right">
+                    {event.transactionHash?.slice(0, 10)}...
+                  </p>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="text-center py-8">
-              <Activity className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <div className="py-8 text-center">
+              <ChartLineUpIcon className="mx-auto mb-4 h-12 w-12 text-muted-foreground" size={48} />
               <p className="text-muted-foreground">Recent activity will appear here</p>
-              <p className="text-sm text-muted-foreground">Transaction logs and KYC events will be displayed</p>
+              <p className="mt-1 text-sm text-muted-foreground">Transaction logs and KYC events</p>
             </div>
           )}
         </CardContent>

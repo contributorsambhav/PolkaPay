@@ -1,6 +1,14 @@
 'use client';
 
-import { AlertTriangle, CheckCircle, Clock, RefreshCw, Shield, User, XCircle } from 'lucide-react';
+import {
+  WarningIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  ArrowClockwiseIcon,
+  ShieldCheckIcon,
+  UserIcon,
+  XCircleIcon,
+} from '@phosphor-icons/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatEther, parseAbi } from 'viem';
 import { useAccount, useReadContract } from 'wagmi';
@@ -11,23 +19,11 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
+import { getContractAddress, CHAIN_ID } from '@/lib/constants';
 
 const SYMBOL = process.env.NEXT_PUBLIC_SYMBOL;
 
 const REMITTANCE_ABI = parseAbi(['function getUserInfo(address user) external view returns (uint8 tier, uint256 dailyLimit, uint256 todayUsed, uint256 balance, bool isWhitelistedUser, bool isBlacklistedUser, bool isFrozenUser, uint8 kycStatus)', 'function getKYCRequest(address user) external view returns (string memory documentHash, uint256 timestamp, uint8 status, string memory rejectionReason)', 'function getKYCStatus(address user) external view returns (uint8)', 'function getBalance(address user) external view returns (uint256)', 'function isWhitelisted(address user) external view returns (bool)', 'function isBlacklisted(address user) external view returns (bool)', 'function isFrozen(address user) external view returns (bool)', 'function getRemainingLimit(address user) external view returns (uint256)', 'function getTierLimit(uint8 tier) external view returns (uint256)']);
-const getContractAddress = (): `0x${string}` | undefined => {
-  const address = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
-  console.log('🔍 Contract Address from env:', address);
-  if (!address) {
-    console.error('❌ NEXT_PUBLIC_CONTRACT_ADDRESS not found in environment');
-    return undefined;
-  }
-  if (!address.startsWith('0x') || address.length !== 42) {
-    console.error('❌ Invalid contract address format:', address);
-    return undefined;
-  }
-  return address as `0x${string}`;
-};
 const KYCStatus = {
   0: 'NONE',
   1: 'PENDING',
@@ -61,7 +57,6 @@ export function ProfileTab() {
       contractAddress
     });
   }, [address, isConnected, chain, contractAddress]);
-  const CORRECT_CHAIN_ID = 420420417;
 
   const {
     data: userInfo,
@@ -75,7 +70,7 @@ export function ProfileTab() {
     functionName: 'getUserInfo',
     args: [address!],
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && !!address && isConnected
     }
@@ -92,7 +87,7 @@ export function ProfileTab() {
     functionName: 'getKYCRequest',
     args: [address!],
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && !!address && isConnected
     }
@@ -136,67 +131,71 @@ export function ProfileTab() {
   const getTierColor = (tier: string) => {
     switch (tier) {
       case 'VIP':
-        return 'bg-purple-100 text-purple-800 border-purple-200';
+        return 'bg-primary/10 text-primary border-border';
       case 'TIER3':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'TIER2':
-        return 'bg-green-100 text-green-800 border-green-200';
       case 'TIER1':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        return 'bg-muted text-muted-foreground border-border';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'bg-muted text-muted-foreground border-border';
     }
   };
   const getKYCStatusColor = (status: string) => {
     switch (status) {
       case 'APPROVED':
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-primary/10 text-primary border-border';
       case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        return 'bg-muted text-muted-foreground border-border';
       case 'REJECTED':
-        return 'bg-red-100 text-red-800 border-red-200';
+        return 'bg-destructive/10 text-destructive border-border';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'bg-muted text-muted-foreground border-border';
     }
   };
   const getKYCStatusIcon = (status: string) => {
     switch (status) {
       case 'APPROVED':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
+        return <CheckCircleIcon className="h-4 w-4 text-primary" weight="regular" />;
       case 'PENDING':
-        return <Clock className="h-4 w-4 text-yellow-500" />;
+        return <ClockIcon className="h-4 w-4 text-muted-foreground" weight="regular" />;
       case 'REJECTED':
-        return <XCircle className="h-4 w-4 text-red-500" />;
+        return <XCircleIcon className="h-4 w-4 text-destructive" weight="regular" />;
       default:
-        return <AlertTriangle className="h-4 w-4 text-gray-500" />;
+        return <WarningIcon className="h-4 w-4 text-muted-foreground" weight="regular" />;
     }
   };
   const renderErrorState = (errorMessage: string) => (
-    <div className="text-sm text-red-500 flex items-center gap-2">
-      <AlertTriangle className="h-4 w-4" />
+    <div className="flex items-center gap-2 text-sm text-destructive">
+      <WarningIcon className="h-4 w-4" weight="regular" />
       {errorMessage}
     </div>
   );
-  const renderLoadingState = () => <Skeleton className="h-6 w-24" />;
+  const renderLoadingState = () => <Skeleton className="h-6 w-24 bg-muted" />;
   if (!isConnected) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold">Wallet Not Connected</h3>
-          <p className="text-muted-foreground">Please connect your wallet to view your profile</p>
+      <div className="min-w-0 max-w-full space-y-6 overflow-x-hidden">
+        <h2 className="text-xl font-semibold tracking-tight">Profile</h2>
+        <div className="flex min-h-[16rem] items-center justify-center rounded-xl bg-muted/30">
+          <div className="text-center">
+            <WarningIcon className="mx-auto mb-4 h-12 w-12 text-muted-foreground" weight="duotone" />
+            <h3 className="text-lg font-semibold">Wallet Not Connected</h3>
+            <p className="text-muted-foreground">Please connect your wallet to view your profile.</p>
+          </div>
         </div>
       </div>
     );
   }
   if (!contractAddress) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold">Configuration Error</h3>
-          <p className="text-muted-foreground">Contract address not properly configured</p>
-          <p className="text-xs text-muted-foreground mt-2">Check NEXT_PUBLIC_CONTRACT_ADDRESS environment variable</p>
+      <div className="min-w-0 max-w-full space-y-6 overflow-x-hidden">
+        <h2 className="text-xl font-semibold tracking-tight">Profile</h2>
+        <div className="flex min-h-[16rem] items-center justify-center rounded-xl bg-muted/30">
+          <div className="text-center">
+            <WarningIcon className="mx-auto mb-4 h-12 w-12 text-destructive" weight="duotone" />
+            <h3 className="text-lg font-semibold">Configuration Error</h3>
+            <p className="text-muted-foreground">Contract address not properly configured.</p>
+            <p className="mt-2 text-xs text-muted-foreground">Check NEXT_PUBLIC_CONTRACT_ADDRESS environment variable.</p>
+          </div>
         </div>
       </div>
     );
@@ -215,20 +214,19 @@ export function ProfileTab() {
   const kycRejectionReason = kycRequest ? kycRequest[3] : undefined;
   const isLoading = loadingUserInfo || loadingKYCRequest;
   return (
-    <div className="space-y-6">
-      {/* Header with refresh button */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">My Profile</h2>
+    <div className="min-w-0 max-w-full space-y-6 overflow-x-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-xl font-semibold tracking-tight">Profile</h2>
         <Button variant="outline" size="sm" onClick={refreshData} disabled={isLoading || isRefreshing}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading || isRefreshing ? 'animate-spin' : ''}`} />
+          <ArrowClockwiseIcon className={`mr-2 h-4 w-4 ${isLoading || isRefreshing ? 'animate-spin' : ''}`} weight="regular" />
           Refresh
         </Button>
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card className="min-w-0 border-border shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+              <UserIcon className="h-5 w-5" weight="regular" />
               Account Information
             </CardTitle>
           </CardHeader>
@@ -270,16 +268,16 @@ export function ProfileTab() {
             </div>
             {kycStatusName === 'REJECTED' && kycRejectionReason && (
               <div className="space-y-2">
-                <label className="text-sm font-medium text-red-600">Rejection Reason</label>
-                <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{kycRejectionReason}</p>
+                <label className="text-sm font-medium text-destructive">Rejection Reason</label>
+                <p className="rounded bg-destructive/10 p-2 text-sm text-destructive">{kycRejectionReason}</p>
               </div>
             )}
           </CardContent>
         </Card>
-        <Card>
+        <Card className="min-w-0 border-border shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+              <ShieldCheckIcon className="h-5 w-5" weight="regular" />
               Account Security & Status
             </CardTitle>
           </CardHeader>
@@ -296,7 +294,7 @@ export function ProfileTab() {
                 isBlacklistedUser ? (
                   <Badge variant="destructive">Blacklisted</Badge>
                 ) : (
-                  <Badge variant={isWhitelistedUser ? 'outline' : 'destructive'} className={isWhitelistedUser ? 'text-green-600 border-green-200' : ''}>
+                  <Badge variant={isWhitelistedUser ? 'outline' : 'destructive'} className={isWhitelistedUser ? 'border-border text-primary' : ''}>
                     {isWhitelistedUser ? 'Whitelisted' : 'Not Whitelisted'}
                   </Badge>
                 )
@@ -313,7 +311,7 @@ export function ProfileTab() {
               ) : hasErrorUserInfo ? (
                 renderErrorState('Error loading account status')
               ) : isFrozenUser !== undefined ? (
-                <Badge variant={isFrozenUser ? 'destructive' : 'outline'} className={!isFrozenUser ? 'text-green-600 border-green-200' : ''}>
+                <Badge variant={isFrozenUser ? 'destructive' : 'outline'} className={!isFrozenUser ? 'border-border text-primary' : ''}>
                   {isFrozenUser ? 'Frozen' : 'Active'}
                 </Badge>
               ) : (

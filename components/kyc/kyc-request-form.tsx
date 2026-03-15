@@ -16,17 +16,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { parseAbi } from 'viem';
 import { toast } from 'sonner';
+import { getContractAddress, CHAIN_ID } from '@/lib/constants';
 
 const REMITTANCE_ABI = parseAbi(['function getKYCStatus(address user) external view returns (uint8)', 'function requestKYC(string calldata documentHash) external', 'function getTierLimit(uint8 tier) external view returns (uint256)']);
 const SYMBOL = process.env.NEXT_PUBLIC_SYMBOL;
-
-const getContractAddress = (): `0x${string}` | undefined => {
-  const address = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
-  if (!address || !address.startsWith('0x') || address.length !== 42) {
-    return undefined;
-  }
-  return address as `0x${string}`;
-};
 
 const KYCStatus = {
   0: 'NONE',
@@ -124,8 +117,6 @@ export function KYCRequestForm() {
     }
   }, []);
 
-  const CORRECT_CHAIN_ID = 420420417;
-
   const {
     data: kycStatusNum,
     refetch: refetchKYCStatus,
@@ -138,7 +129,7 @@ export function KYCRequestForm() {
     functionName: 'getKYCStatus',
     args: [address!],
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && !!address && isConnected
     }
@@ -151,7 +142,7 @@ export function KYCRequestForm() {
     abi: REMITTANCE_ABI,
     functionName: 'getTierLimit',
     args: [1],
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && !!address && isConnected
     }
@@ -163,7 +154,7 @@ export function KYCRequestForm() {
     abi: REMITTANCE_ABI,
     functionName: 'getTierLimit',
     args: [2],
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && !!address && isConnected
     }
@@ -175,7 +166,7 @@ export function KYCRequestForm() {
     abi: REMITTANCE_ABI,
     functionName: 'getTierLimit',
     args: [3],
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && !!address && isConnected
     }
@@ -187,7 +178,7 @@ export function KYCRequestForm() {
     abi: REMITTANCE_ABI,
     functionName: 'getTierLimit',
     args: [4],
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && !!address && isConnected
     }
@@ -497,7 +488,7 @@ export function KYCRequestForm() {
         abi: REMITTANCE_ABI,
         functionName: 'requestKYC',
         args: [documentHash],
-        chainId: CORRECT_CHAIN_ID
+        chainId: CHAIN_ID
       });
     } catch (error) {
       console.error('❌ Blockchain submission failed:', error);

@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getContractAddress, CHAIN_ID } from '@/lib/constants';
 
 const SYMBOL = process.env.NEXT_PUBLIC_SYMBOL;
 
@@ -16,14 +17,6 @@ const REMITTANCE_ABI = parseAbi([
   'function getTotalTransactions() external view returns (uint256)',
   'function getMyTransactions() external view returns ((address,address,uint256,uint256,uint256,uint256)[] memory)',
 ]);
-
-const getContractAddress = (): `0x${string}` | undefined => {
-  const address = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
-  if (!address || !address.startsWith('0x') || address.length !== 42) {
-    return undefined;
-  }
-  return address as `0x${string}`;
-};
 
 interface DailyStats {
   myTransactions24h: number;
@@ -53,15 +46,13 @@ export function NetworkActivityWidget() {
     setContractAddress(getContractAddress());
   }, []);
 
-  const CORRECT_CHAIN_ID = 420420417;
-
   // Get total network transactions
   const { data: totalTransactions, isLoading: loadingTotal } = useReadContract({
     address: contractAddress,
     abi: REMITTANCE_ABI,
     functionName: 'getTotalTransactions',
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isConnected,
     },
@@ -73,7 +64,7 @@ export function NetworkActivityWidget() {
     abi: REMITTANCE_ABI,
     functionName: 'getMyTransactions',
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isConnected && !!address,
     },
@@ -149,7 +140,7 @@ export function NetworkActivityWidget() {
     stats.myVolume24h > 100 ? 'high' : stats.myVolume24h > 10 ? 'moderate' : stats.myVolume24h > 0 ? 'low' : 'none';
 
   const volumeColor = {
-    high: 'text-green-600',
+    high: 'text-success',
     moderate: 'text-blue-600',
     low: 'text-yellow-600',
     none: 'text-muted-foreground',
@@ -246,22 +237,22 @@ export function NetworkActivityWidget() {
         {stats.myVolume24h > 0 && (
           <div className="mt-4 space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-red-600 font-medium">
+              <span className="text-destructive font-medium">
                 Sent: {stats.mySent24h.toFixed(2)} {SYMBOL}
               </span>
-              <span className="text-green-600 font-medium">
+              <span className="text-success font-medium">
                 Received: {stats.myReceived24h.toFixed(2)} {SYMBOL}
               </span>
             </div>
             <div className="flex h-2 rounded-full overflow-hidden bg-muted">
               <div
-                className="bg-red-400 transition-all duration-500"
+                className="bg-destructive transition-all duration-500"
                 style={{
                   width: `${stats.myVolume24h > 0 ? (stats.mySent24h / stats.myVolume24h) * 100 : 50}%`,
                 }}
               />
               <div
-                className="bg-green-400 transition-all duration-500"
+                className="bg-success transition-all duration-500"
                 style={{
                   width: `${stats.myVolume24h > 0 ? (stats.myReceived24h / stats.myVolume24h) * 100 : 50}%`,
                 }}

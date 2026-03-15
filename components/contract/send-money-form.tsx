@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import type React from 'react';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
+import { getContractAddress, CHAIN_ID } from '@/lib/constants';
 
 const REMITTANCE_ABI = parseAbi(['function sendRemittance(address recipient) external payable', 'function getMyBalance() external view returns (uint256)', 'function getMyKYCStatus() external view returns (uint8)', 'function getMyTier() external view returns (uint8)', 'function getMyRemainingLimit() external view returns (uint256)', 'function getMyWhitelistStatus() external view returns (bool)', 'function getMyBlacklistStatus() external view returns (bool)', 'function getMyFrozenStatus() external view returns (bool)', 'function calculateTransactionFee(uint256 amount) external pure returns (uint256)', 'function getTransactionCost(uint256 amount) external pure returns (uint256 fee, uint256 total)', 'event Sent(address indexed sender, address indexed recipient, uint256 amount)']);
 enum KYCStatus {
@@ -33,13 +34,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescript
 import { XCircle } from 'lucide-react';
 const SYMBOL = process.env.NEXT_PUBLIC_SYMBOL;
 
-const getContractAddress = (): `0x${string}` | undefined => {
-  const address = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
-  if (!address || !address.startsWith('0x') || address.length !== 42) {
-    return undefined;
-  }
-  return address as `0x${string}`;
-};
 const getTierLabel = (tier: number) => {
   switch (tier) {
     case UserTier.NONE:
@@ -100,8 +94,6 @@ export function SendMoneyForm() {
     }
   }, []);
 
-  const CORRECT_CHAIN_ID = 420420417;
-
   const {
     data: kycStatus,
     refetch: refetchKYC,
@@ -111,7 +103,7 @@ export function SendMoneyForm() {
     abi: REMITTANCE_ABI,
     functionName: 'getMyKYCStatus',
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isConnected
     }
@@ -125,7 +117,7 @@ export function SendMoneyForm() {
     abi: REMITTANCE_ABI,
     functionName: 'getMyTier',
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isConnected
     }
@@ -139,7 +131,7 @@ export function SendMoneyForm() {
     abi: REMITTANCE_ABI,
     functionName: 'getMyRemainingLimit',
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isConnected
     }
@@ -149,7 +141,7 @@ export function SendMoneyForm() {
     abi: REMITTANCE_ABI,
     functionName: 'getMyWhitelistStatus',
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isConnected
     }
@@ -159,7 +151,7 @@ export function SendMoneyForm() {
     abi: REMITTANCE_ABI,
     functionName: 'getMyBlacklistStatus',
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isConnected
     }
@@ -169,14 +161,14 @@ export function SendMoneyForm() {
     abi: REMITTANCE_ABI,
     functionName: 'getMyFrozenStatus',
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isConnected
     }
   });
   const { isLoading: isWaitingForTx, isSuccess: isTxConfirmed, isError: isTxFailed } = useWaitForTransactionReceipt({
     hash: txHash,
-    chainId: CORRECT_CHAIN_ID
+    chainId: CHAIN_ID
   });
 
   useEffect(() => {
@@ -212,7 +204,7 @@ export function SendMoneyForm() {
     abi: REMITTANCE_ABI,
     functionName: 'getTransactionCost',
     args: amount && parseFloat(amount) > 0 ? [parseEther(amount)] : undefined,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && !!amount && parseFloat(amount) > 0
     }
@@ -287,7 +279,7 @@ export function SendMoneyForm() {
         recipientReceives: `${formatEther(transactionCost.recipientReceivesWei)} ${SYMBOL}`,
         fee: `${formatEther(transactionCost.feeWei)} ${SYMBOL}`,
         contractAddress,
-        chainId: CORRECT_CHAIN_ID
+        chainId: CHAIN_ID
       });
       const hash = await writeContractAsync({
         address: contractAddress,
@@ -295,7 +287,7 @@ export function SendMoneyForm() {
         functionName: 'sendRemittance',
         args: [recipient as `0x${string}`],
         value: userPaysWei, // Send exactly what user entered
-        chainId: CORRECT_CHAIN_ID
+        chainId: CHAIN_ID
       });
       console.log('✅ Transaction submitted:', hash);
       setTxHash(hash);

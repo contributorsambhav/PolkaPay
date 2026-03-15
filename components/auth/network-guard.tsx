@@ -4,8 +4,7 @@ import { useAccount, useChainId } from 'wagmi';
 import { LoginForm } from './login-form';
 import { useEffect, useState } from 'react';
 import type React from 'react';
-
-const CORRECT_CHAIN_ID = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || "420420417");
+import { CHAIN_ID } from '@/lib/constants';
 
 export function NetworkGuard({ children }: { children: React.ReactNode }) {
   const { isConnected } = useAccount();
@@ -18,13 +17,13 @@ export function NetworkGuard({ children }: { children: React.ReactNode }) {
 
   // Force network switch effect
   useEffect(() => {
-    if (mounted && isConnected && chainId !== CORRECT_CHAIN_ID) {
+    if (mounted && isConnected && chainId !== CHAIN_ID) {
       const switchNetwork = async () => {
         if (typeof window !== 'undefined' && (window as any).ethereum) {
           try {
             await (window as any).ethereum.request({
               method: 'wallet_switchEthereumChain',
-              params: [{ chainId: `0x${CORRECT_CHAIN_ID.toString(16)}` }],
+              params: [{ chainId: `0x${CHAIN_ID.toString(16)}` }],
             });
           } catch (err: any) {
             console.error('Auto switch failed', err);
@@ -37,7 +36,7 @@ export function NetworkGuard({ children }: { children: React.ReactNode }) {
 
   if (!mounted) return null;
 
-  const isCorrectNetwork = chainId === CORRECT_CHAIN_ID;
+  const isCorrectNetwork = chainId === CHAIN_ID;
 
   if (!isConnected || !isCorrectNetwork) {
     return <LoginForm />;

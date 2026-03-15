@@ -2,7 +2,7 @@
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle, Crown, Filter, MoreHorizontal, Pause, Play, RefreshCw, Search, UserCheck, UserX, Users } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatEther, parseAbi } from 'viem';
 import { useAccount, useReadContract, useWaitForTransactionReceipt, useWriteContract } from 'wagmi';
 import { useEffect, useState } from 'react';
@@ -13,17 +13,12 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UserActionConfirmationModal } from '@/components/ui/confirmation-modal';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+import { getContractAddress, CHAIN_ID } from '@/lib/constants';
 
 const SYMBOL = process.env.NEXT_PUBLIC_SYMBOL;
 
 const REMITTANCE_ABI = parseAbi(['function getAllKYCUsers() external view returns (address[] memory)', 'function getUserInfo(address user) external view returns (uint8 tier, uint256 dailyLimit, uint256 todayUsed, uint256 balance, bool isWhitelistedUser, bool isBlacklistedUser, bool isFrozenUser, uint8 kycStatus)', 'function owner() external view returns (address)', 'function setUserTier(address user, uint8 tier) external', 'function freezeRecipient(address user, bool frozen) external', 'function setBlacklist(address user, bool status) external']);
-const getContractAddress = (): `0x${string}` | undefined => {
-  const address = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
-  if (!address || !address.startsWith('0x') || address.length !== 42) {
-    return undefined;
-  }
-  return address as `0x${string}`;
-};
 const KYCStatus = {
   0: 'NONE',
   1: 'PENDING',
@@ -66,26 +61,30 @@ function TierChangeModal({ trigger, userAddress, currentTier, onTierChange }: { 
   };
   return (
     <div>
-      <div onClick={() => setIsOpen(true)}>{trigger}</div>
+      <div onClick={() => setIsOpen(true)} className="cursor-pointer">{trigger}</div>
       {isOpen && (
-        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96 max-w-sm mx-4">
-            <div className="flex items-center gap-3 mb-4">
-              <Crown className="h-5 w-5 text-purple-600" />
-              <h3 className="text-lg font-semibold">Change User Tier</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-xl border border-border bg-card p-5 shadow-lg sm:p-6">
+            <div className="mb-4 flex items-center gap-3">
+              <Crown className="h-5 w-5 shrink-0 text-primary" />
+              <h3 className="text-lg font-semibold text-foreground">Change User Tier</h3>
             </div>
             <div className="space-y-4">
               <div>
-                <p className="text-sm text-gray-600 mb-2">User Address:</p>
-                <p className="font-mono text-xs bg-gray-100 p-2 rounded break-all">{userAddress}</p>
+                <p className="mb-1.5 text-sm font-medium text-muted-foreground">User address</p>
+                <p className="break-all rounded-lg border border-border bg-muted/50 px-3 py-2 font-mono text-xs text-foreground">{userAddress}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600 mb-2">Current Tier:</p>
+                <p className="mb-1.5 text-sm font-medium text-muted-foreground">Current tier</p>
                 <Badge className={getTierColor(currentTier)}>{currentTier}</Badge>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Select New Tier:</label>
-                <select value={selectedTier} onChange={(e) => setSelectedTier(Number(e.target.value))} className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                <label className="mb-1.5 block text-sm font-medium text-foreground">New tier</label>
+                <select
+                  value={selectedTier}
+                  onChange={(e) => setSelectedTier(Number(e.target.value))}
+                  className="w-full cursor-pointer rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30"
+                >
                   {TierOptions.map((tier) => (
                     <option key={tier.value} value={tier.value}>
                       {tier.label}
@@ -93,14 +92,14 @@ function TierChangeModal({ trigger, userAddress, currentTier, onTierChange }: { 
                   ))}
                 </select>
               </div>
-              <p className="text-sm text-gray-500">This action will immediately change the user's daily transaction limits.</p>
+              <p className="text-xs text-muted-foreground">This will update the user’s daily transaction limits immediately.</p>
             </div>
-            <div className="flex gap-2 mt-6">
-              <Button variant="outline" className="flex-1" onClick={() => setIsOpen(false)}>
+            <div className="mt-6 flex gap-2">
+              <Button variant="outline" className="flex-1 cursor-pointer" onClick={() => setIsOpen(false)}>
                 Cancel
               </Button>
-              <Button className="flex-1 bg-purple-600 hover:bg-purple-700" onClick={handleConfirm} disabled={selectedTier === TierOptions.find((t) => t.label === currentTier)?.value}>
-                Update Tier
+              <Button className="flex-1 cursor-pointer" onClick={handleConfirm} disabled={selectedTier === TierOptions.find((t) => t.label === currentTier)?.value}>
+                Update tier
               </Button>
             </div>
           </div>
@@ -112,22 +111,19 @@ function TierChangeModal({ trigger, userAddress, currentTier, onTierChange }: { 
 const getTierColor = (tier: string) => {
   switch (tier) {
     case 'VIP':
-      return 'bg-purple-100 text-purple-800 border-purple-200';
+      return 'bg-primary/15 text-primary border-primary/30';
     case 'TIER3':
-      return 'bg-blue-100 text-blue-800 border-blue-200';
+      return 'bg-secondary/50 text-secondary-foreground border-border';
     case 'TIER2':
-      return 'bg-green-100 text-green-800 border-green-200';
+      return 'bg-success/15 text-success border-success/30';
     case 'TIER1':
-      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      return 'bg-warning/15 text-warning-foreground border-warning/30';
     case 'NONE':
-      return 'bg-gray-100 text-gray-800 border-gray-200';
     default:
-      return 'bg-gray-100 text-gray-800 border-gray-200';
+      return 'bg-muted text-muted-foreground border-border';
   }
 };
 function UserInfoCard({ userAddress, contractAddress, account, isAdmin, onUserAction, isTransactionPending }: { userAddress: string; contractAddress: `0x${string}`; account: `0x${string}` | undefined; isAdmin: boolean; onUserAction: (action: string, userAddress: string, tier?: number) => void; isTransactionPending: boolean }) {
-  const CORRECT_CHAIN_ID = 420420417;
-
   const {
     data: userInfo,
     isLoading,
@@ -139,7 +135,7 @@ function UserInfoCard({ userAddress, contractAddress, account, isAdmin, onUserAc
     abi: REMITTANCE_ABI,
     functionName: 'getUserInfo',
     args: [userAddress as `0x${string}`],
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && !!account && isAdmin && !!userAddress
     }
@@ -159,63 +155,55 @@ function UserInfoCard({ userAddress, contractAddress, account, isAdmin, onUserAc
   const getKYCStatusColor = (status: string) => {
     switch (status) {
       case 'APPROVED':
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-success/15 text-success border-success/30';
       case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        return 'bg-warning/15 text-warning-foreground border-warning/30';
       case 'REJECTED':
-        return 'bg-red-100 text-red-800 border-red-200';
+        return 'bg-destructive/15 text-destructive border-destructive/30';
       case 'NONE':
-        return 'bg-gray-100 text-gray-800 border-gray-200';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'bg-muted text-muted-foreground border-border';
     }
   };
   if (isLoading) {
     return (
-      <div className="border rounded-lg p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div>
-              <p className="font-medium font-mono text-sm">{userAddress}</p>
-              <div className="flex items-center gap-2 mt-1">
-                <Skeleton className="h-6 w-16" />
-                <Skeleton className="h-6 w-20" />
-              </div>
+      <Card className="overflow-hidden border-border shadow-sm">
+        <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 space-y-2">
+            <Skeleton className="h-4 w-48 rounded" />
+            <div className="flex gap-2">
+              <Skeleton className="h-6 w-16 rounded-full" />
+              <Skeleton className="h-6 w-20 rounded-full" />
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="text-right text-sm">
-              <Skeleton className="h-4 w-24 mb-1" />
-              <Skeleton className="h-4 w-24" />
-            </div>
-            <Skeleton className="h-8 w-10" />
+          <div className="flex shrink-0 flex-col gap-1 text-right">
+            <Skeleton className="h-4 w-24 rounded" />
+            <Skeleton className="h-4 w-20 rounded" />
+            <Skeleton className="h-4 w-28 rounded" />
           </div>
-        </div>
-        <div className="flex items-center gap-2 mt-4">
-          <Skeleton className="h-8 w-24" />
-          <Skeleton className="h-8 w-20" />
-          <Skeleton className="h-8 w-28" />
-        </div>
-      </div>
+        </CardContent>
+        <CardFooter className="border-t border-border">
+          <Skeleton className="h-9 w-28 rounded-lg" />
+          <Skeleton className="h-9 w-24 rounded-lg" />
+          <Skeleton className="h-9 w-24 rounded-lg" />
+        </CardFooter>
+      </Card>
     );
   }
   if (error || !userInfo) {
     return (
-      <div className="border rounded-lg p-4 border-red-200">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div>
-              <p className="font-medium font-mono text-sm">{userAddress}</p>
-              <Badge variant="destructive">Error loading data</Badge>
-            </div>
+      <Card className="border-destructive/40">
+        <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="truncate font-mono text-sm font-medium text-foreground">{userAddress}</p>
+            <Badge variant="destructive" className="mt-2">Error loading data</Badge>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isLoading}>
-              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            </Button>
-          </div>
-        </div>
-      </div>
+          <Button variant="outline" size="sm" className="cursor-pointer shrink-0" onClick={() => refetch()} disabled={isLoading}>
+            <RefreshCw className={`mr-2 h-4 w-4 shrink-0 ${isLoading ? 'animate-spin' : ''}`} />
+            Retry
+          </Button>
+        </CardContent>
+      </Card>
     );
   }
   const [tier, dailyLimit, todayUsed, balance, isWhitelistedUser, isBlacklistedUser, isFrozenUser, kycStatus] = userInfo;
@@ -231,39 +219,36 @@ function UserInfoCard({ userAddress, contractAddress, account, isAdmin, onUserAc
     todayUsed: formatEther(todayUsed)
   };
   return (
-    <div className="border rounded-lg p-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div>
-            <p className="font-medium font-mono text-sm">{userData.address}</p>
-            <div className="flex items-center gap-2 mt-1">
-              <Badge className={getTierColor(userData.tier)}>{userData.tier}</Badge>
-              <Badge className={getKYCStatusColor(userData.kycStatus)}>{userData.kycStatus}</Badge>
-              {userData.isFrozen && <Badge variant="destructive">FROZEN</Badge>}
-              {userData.isBlacklisted && <Badge variant="destructive">BLACKLISTED</Badge>}
-            </div>
+    <Card className="overflow-hidden border-border bg-card shadow-sm">
+      <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 flex-1 space-y-3">
+          <p className="truncate font-mono text-sm font-medium text-foreground sm:break-all">{userData.address}</p>
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="secondary" className={cn('cursor-default text-xs font-medium', getTierColor(userData.tier))}>
+              {userData.tier}
+            </Badge>
+            <Badge variant="secondary" className={cn('cursor-default text-xs', getKYCStatusColor(userData.kycStatus))}>
+              {userData.kycStatus}
+            </Badge>
+            {userData.isFrozen && (
+              <Badge variant="destructive" className="cursor-default text-xs">FROZEN</Badge>
+            )}
+            {userData.isBlacklisted && (
+              <Badge variant="destructive" className="cursor-default text-xs">BLACKLISTED</Badge>
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="text-right text-sm">
-            <p className="text-muted-foreground">
-              Balance: {Math.floor(Number(userData.balance))} ${SYMBOL}
-            </p>
-            <p className="text-muted-foreground">
-              Limit: {Math.floor(Number(userData.dailyLimit))} ${SYMBOL}
-            </p>
-            <p className="text-muted-foreground">
-              Used Today: {Math.floor(Number(userData.todayUsed))} ${SYMBOL}
-            </p>
-          </div>
+        <div className="shrink-0 min-w-0 rounded-lg bg-muted/50 px-3 py-2.5 text-right text-sm sm:min-w-[130px]">
+          <p className="font-medium tabular-nums text-foreground">{Math.floor(Number(userData.balance))} {SYMBOL}</p>
+          <p className="text-xs text-muted-foreground">Limit {Math.floor(Number(userData.dailyLimit))} · Used {Math.floor(Number(userData.todayUsed))}</p>
         </div>
-      </div>
-      <div className="flex items-center gap-2 mt-4">
+      </CardContent>
+      <CardFooter className="border-t border-border bg-muted/20">
         <TierChangeModal
           trigger={
-            <Button size="sm" variant="outline" disabled={isTransactionPending}>
-              <Crown className="h-4 w-4 mr-2" />
-              Change Tier
+            <Button size="sm" variant="secondary" className="cursor-pointer" disabled={isTransactionPending}>
+              <Crown className="mr-2 h-4 w-4 shrink-0" />
+              Change tier
             </Button>
           }
           userAddress={userData.address}
@@ -273,8 +258,8 @@ function UserInfoCard({ userAddress, contractAddress, account, isAdmin, onUserAc
         {userData.isFrozen ? (
           <UserActionConfirmationModal
             trigger={
-              <Button size="sm" variant="outline" className="text-green-600 bg-transparent" disabled={isTransactionPending}>
-                <Play className="h-4 w-4 mr-2" />
+              <Button size="sm" variant="outline" className="cursor-pointer border-success/40 text-success hover:bg-success/10" disabled={isTransactionPending}>
+                <Play className="mr-2 h-4 w-4 shrink-0" />
                 Unfreeze
               </Button>
             }
@@ -285,8 +270,8 @@ function UserInfoCard({ userAddress, contractAddress, account, isAdmin, onUserAc
         ) : (
           <UserActionConfirmationModal
             trigger={
-              <Button size="sm" variant="outline" className="text-red-600 bg-transparent" disabled={isTransactionPending}>
-                <Pause className="h-4 w-4 mr-2" />
+              <Button size="sm" variant="outline" className="cursor-pointer border-destructive/40 text-destructive hover:bg-destructive/10" disabled={isTransactionPending}>
+                <Pause className="mr-2 h-4 w-4 shrink-0" />
                 Freeze
               </Button>
             }
@@ -298,39 +283,30 @@ function UserInfoCard({ userAddress, contractAddress, account, isAdmin, onUserAc
         {userData.isBlacklisted ? (
           <UserActionConfirmationModal
             trigger={
-              <Button size="sm" variant="outline" className="text-green-600 bg-transparent" disabled={isTransactionPending}>
-                <UserCheck className="h-4 w-4 mr-2" />
-                Remove from Blacklist
+              <Button size="sm" variant="outline" className="cursor-pointer border-success/40 text-success hover:bg-success/10" disabled={isTransactionPending}>
+                <UserCheck className="mr-2 h-4 w-4 shrink-0" />
+                Remove from blacklist
               </Button>
             }
             action="remove-blacklist"
             userAddress={userData.address}
             onConfirm={() => onUserAction('remove-blacklist', userData.address)}
-            title="Remove User from Blacklist"
-            description={`Are you sure you want to remove ${userData.address} from the blacklist? This user will be able to use the platform again.`}
-            confirmText="Remove from Blacklist"
-            icon={<UserCheck className="h-5 w-5" />}
           />
         ) : (
           <UserActionConfirmationModal
             trigger={
-              <Button size="sm" variant="outline" className="text-red-600 bg-transparent" disabled={isTransactionPending}>
-                <UserX className="h-4 w-4 mr-2" />
+              <Button size="sm" variant="outline" className="cursor-pointer border-destructive/40 text-destructive hover:bg-destructive/10" disabled={isTransactionPending}>
+                <UserX className="mr-2 h-4 w-4 shrink-0" />
                 Blacklist
               </Button>
             }
             action="blacklist"
             userAddress={userData.address}
             onConfirm={() => onUserAction('blacklist', userData.address)}
-            title="Blacklist User"
-            description={`Are you sure you want to blacklist ${userData.address}? This user will be denied access to all platform functions.`}
-            confirmText="Blacklist User"
-            variant="destructive"
-            icon={<UserX className="h-5 w-5" />}
           />
         )}
-      </div>
-    </div>
+      </CardFooter>
+    </Card>
   );
 }
 declare global {
@@ -351,14 +327,13 @@ export function UsersTab() {
       toast.error('Contract address not configured properly');
     }
   }, []);
-  const CORRECT_CHAIN_ID = 420420417;
 
   const { data: contractOwner } = useReadContract({
     account: address,
     address: contractAddress,
     abi: REMITTANCE_ABI,
     functionName: 'owner',
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && !!address && isConnected
     }
@@ -373,7 +348,7 @@ export function UsersTab() {
     account: address,
     abi: REMITTANCE_ABI,
     functionName: 'getAllKYCUsers',
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && !!address && isConnected && isAdmin
     }
@@ -423,7 +398,7 @@ export function UsersTab() {
             abi: REMITTANCE_ABI,
             functionName: 'setUserTier',
             args: [userAddress as `0x${string}`, tier],
-            chainId: CORRECT_CHAIN_ID
+            chainId: CHAIN_ID
           });
           break;
         case 'freeze':
@@ -432,7 +407,7 @@ export function UsersTab() {
             abi: REMITTANCE_ABI,
             functionName: 'freezeRecipient',
             args: [userAddress as `0x${string}`, true],
-            chainId: CORRECT_CHAIN_ID
+            chainId: CHAIN_ID
           });
           break;
         case 'unfreeze':
@@ -441,7 +416,7 @@ export function UsersTab() {
             abi: REMITTANCE_ABI,
             functionName: 'freezeRecipient',
             args: [userAddress as `0x${string}`, false],
-            chainId: CORRECT_CHAIN_ID
+            chainId: CHAIN_ID
           });
           break;
         case 'blacklist':
@@ -450,7 +425,7 @@ export function UsersTab() {
             abi: REMITTANCE_ABI,
             functionName: 'setBlacklist',
             args: [userAddress as `0x${string}`, true],
-            chainId: CORRECT_CHAIN_ID
+            chainId: CHAIN_ID
           });
           break;
         case 'remove-blacklist':
@@ -459,7 +434,7 @@ export function UsersTab() {
             abi: REMITTANCE_ABI,
             functionName: 'setBlacklist',
             args: [userAddress as `0x${string}`, false],
-            chainId: CORRECT_CHAIN_ID
+            chainId: CHAIN_ID
           });
           break;
         default:
@@ -479,130 +454,140 @@ export function UsersTab() {
   const filteredUsers = allKYCUsers?.filter((userAddress) => userAddress.toLowerCase().includes(searchTerm.toLowerCase())) || [];
   if (!isConnected) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            User Management
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <AlertTriangle className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
-            <p className="text-muted-foreground">Please connect your wallet to access user management</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="w-full min-w-0 space-y-8">
+        <header>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">User Management</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">Manage KYC-approved users</p>
+        </header>
+        <div className="flex min-h-[280px] flex-col items-center justify-center rounded-xl bg-muted/30 py-12 text-center">
+          <AlertTriangle className="mb-4 h-10 w-10 text-warning" />
+          <p className="text-sm font-medium text-muted-foreground">Connect your wallet to access user management</p>
+        </div>
+      </div>
     );
   }
   if (!contractAddress) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            User Management
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
-            <p className="text-muted-foreground">Contract address not configured</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="w-full min-w-0 space-y-8">
+        <header>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">User Management</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">Manage KYC-approved users</p>
+        </header>
+        <div className="flex min-h-[280px] flex-col items-center justify-center rounded-xl bg-muted/30 py-12 text-center">
+          <AlertTriangle className="mb-4 h-10 w-10 text-destructive" />
+          <p className="text-sm font-medium text-muted-foreground">Contract address not configured</p>
+        </div>
+      </div>
     );
   }
   if (!isAdmin && contractOwner) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            User Management
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
-            <p className="text-muted-foreground">Access denied: Admin privileges required</p>
-            <p className="text-sm text-muted-foreground mt-2">Contract Owner: {contractOwner}</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="w-full min-w-0 space-y-8">
+        <header>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">User Management</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">Manage KYC-approved users</p>
+        </header>
+        <div className="flex min-h-[280px] flex-col items-center justify-center rounded-xl bg-muted/30 py-12 text-center">
+          <AlertTriangle className="mb-4 h-10 w-10 text-destructive" />
+          <p className="text-sm font-medium text-muted-foreground">Access denied: admin privileges required</p>
+          <p className="mt-2 text-xs text-muted-foreground">Owner: {contractOwner}</p>
+        </div>
+      </div>
     );
   }
   const isLoading = loadingKYCUsers || isRefreshing;
   const isTransactionPending = isWritePending || isConfirming;
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              User Management ({filteredUsers.length} users)
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search users..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 w-64" />
-              </div>
-              <Button variant="outline" size="sm" onClick={refreshData} disabled={isLoading || isTransactionPending}>
-                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-              </Button>
-              <Button variant="outline" size="sm">
-                <Filter className="h-4 w-4 mr-2" />
-                Filter
-              </Button>
-            </div>
+    <div className="w-full min-w-0 space-y-8">
+      {/* Page header: no outer card, clean separation */}
+      <header className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+            User Management
+          </h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            {filteredUsers.length} user{filteredUsers.length !== 1 ? 's' : ''}
+          </p>
+        </div>
+        <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto">
+          <div className="relative min-w-0 flex-1 sm:w-52">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 shrink-0 text-muted-foreground" />
+            <Input
+              placeholder="Search users..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="h-9 pl-9"
+            />
           </div>
-        </CardHeader>
-        <CardContent>
-          {errorKYCUsers && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>Failed to load users from contract</AlertDescription>
-            </Alert>
-          )}
-          <div className="space-y-4">
-            {isLoading ? (
-              Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div>
-                        <Skeleton className="h-5 w-40 mb-2" />
-                        <div className="flex items-center gap-2">
-                          <Skeleton className="h-6 w-16" />
-                          <Skeleton className="h-6 w-20" />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Skeleton className="h-4 w-24" />
-                      <Skeleton className="h-8 w-10" />
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 mt-4">
-                    <Skeleton className="h-8 w-24" />
-                    <Skeleton className="h-8 w-20" />
-                    <Skeleton className="h-8 w-28" />
+          <Button
+            variant="outline"
+            size="icon"
+            className="cursor-pointer shrink-0"
+            onClick={refreshData}
+            disabled={isLoading || isTransactionPending}
+            title="Refresh"
+          >
+            <RefreshCw className={`h-4 w-4 shrink-0 ${isLoading ? 'animate-spin' : ''}`} />
+          </Button>
+          <Button variant="outline" size="sm" className="cursor-pointer shrink-0">
+            <Filter className="mr-2 h-4 w-4 shrink-0" />
+            Filter
+          </Button>
+        </div>
+      </header>
+
+      {errorKYCUsers && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>Failed to load users from contract</AlertDescription>
+        </Alert>
+      )}
+
+      <div className="min-w-0 space-y-4">
+        {isLoading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i} className="overflow-hidden border-border shadow-sm">
+              <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-48 rounded" />
+                  <div className="flex gap-2">
+                    <Skeleton className="h-6 w-16 rounded-full" />
+                    <Skeleton className="h-6 w-20 rounded-full" />
                   </div>
                 </div>
-              ))
-            ) : filteredUsers.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No users found</p>
-                {errorKYCUsers && <p className="text-sm mt-2">Unable to load users from contract</p>}
-              </div>
-            ) : (
-              filteredUsers.map((userAddress) => <UserInfoCard key={userAddress} userAddress={userAddress} contractAddress={contractAddress!} account={address} isAdmin={isAdmin} onUserAction={handleUserAction} isTransactionPending={isTransactionPending} />)
-            )}
+                <div className="flex gap-2">
+                  <Skeleton className="h-4 w-24 rounded" />
+                  <Skeleton className="h-9 w-10 rounded-lg" />
+                </div>
+              </CardContent>
+              <CardFooter className="border-t border-border">
+                <Skeleton className="h-9 w-28 rounded-lg" />
+                <Skeleton className="h-9 w-24 rounded-lg" />
+              </CardFooter>
+            </Card>
+          ))
+        ) : filteredUsers.length === 0 ? (
+          <div className="flex min-h-[280px] flex-col items-center justify-center rounded-xl bg-muted/30 py-12 text-center">
+            <Users className="mb-4 h-10 w-10 text-muted-foreground/50" />
+            <p className="text-sm font-medium text-muted-foreground">No users found</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {searchTerm ? 'Try a different search.' : 'Users will appear here once they complete KYC.'}
+            </p>
           </div>
-        </CardContent>
-      </Card>
+        ) : (
+          filteredUsers.map((userAddress) => (
+            <UserInfoCard
+              key={userAddress}
+              userAddress={userAddress}
+              contractAddress={contractAddress!}
+              account={address}
+              isAdmin={isAdmin}
+              onUserAction={handleUserAction}
+              isTransactionPending={isTransactionPending}
+            />
+          ))
+        )}
+      </div>
     </div>
   );
 }

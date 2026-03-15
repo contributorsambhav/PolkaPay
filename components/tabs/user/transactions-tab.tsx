@@ -1,6 +1,17 @@
 'use client';
 
-import { ArrowDownRight, ArrowUpRight, BarChart3, Calendar, Clock, Download, Filter, RefreshCw, Search, TrendingDown, TrendingUp } from 'lucide-react';
+import {
+  ArrowDownRightIcon,
+  ArrowUpRightIcon,
+  ChartBarIcon,
+  ClockIcon,
+  DownloadSimpleIcon,
+  ArrowClockwiseIcon,
+  FunnelSimpleIcon,
+  MagnifyingGlassIcon,
+  TrendDownIcon,
+  TrendUpIcon,
+} from '@phosphor-icons/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatEther, parseAbi } from 'viem';
@@ -12,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
+import { getContractAddress, CHAIN_ID } from '@/lib/constants';
 
 const SYMBOL = process.env.NEXT_PUBLIC_SYMBOL;
 
@@ -34,13 +46,6 @@ interface ProcessedTransaction {
   txHash?: string;
 }
 const REMITTANCE_ABI = parseAbi(['function getMyTransactions() external view returns ((address,address,uint256,uint256,uint256,uint256)[] memory)', 'function getUserTransactionIds(address user) external view returns (uint256[] memory)', 'function getTransactionsByUser(address user) external view returns ((address,address,uint256,uint256,uint256,uint256)[] memory)', 'function getTotalTransactions() external view returns (uint256)', 'function getAllTransactions() external view returns ((address,address,uint256,uint256,uint256,uint256)[] memory)', 'function getMyBalance() external view returns (uint256)', 'function calculateTransactionFee(uint256 amount) external pure returns (uint256)', 'function getTransactionCost(uint256 amount) external pure returns (uint256 fee, uint256 total)', 'struct Transaction { address sender; address recipient; uint256 amount; uint256 fee; uint256 timestamp; uint256 txnId; }']);
-const getContractAddress = (): `0x${string}` | undefined => {
-  const address = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
-  if (!address || !address.startsWith('0x') || address.length !== 42) {
-    return undefined;
-  }
-  return address as `0x${string}`;
-};
 export function TransactionsTab() {
   const { address, isConnected } = useAccount();
   const [contractAddress, setContractAddress] = useState<`0x${string}` | undefined>();
@@ -58,7 +63,6 @@ export function TransactionsTab() {
       setIsLoading(false);
     }
   }, []);
-  const CORRECT_CHAIN_ID = 420420417;
 
   const {
     data: userTransactions,
@@ -70,7 +74,7 @@ export function TransactionsTab() {
     abi: REMITTANCE_ABI,
     functionName: 'getMyTransactions',
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isConnected && !!address
     }
@@ -80,7 +84,7 @@ export function TransactionsTab() {
     abi: REMITTANCE_ABI,
     functionName: 'getMyBalance',
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isConnected && !!address
     }
@@ -172,128 +176,125 @@ export function TransactionsTab() {
   };
   if (!isConnected) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex min-h-[16rem] items-center justify-center rounded-xl bg-muted/30">
         <div className="text-center">
-          <BarChart3 className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+          <ChartBarIcon className="mx-auto mb-4 h-12 w-12 text-muted-foreground" weight="duotone" />
           <h3 className="text-lg font-semibold">Wallet Not Connected</h3>
-          <p className="text-muted-foreground">Please connect your wallet to view transactions</p>
+          <p className="text-muted-foreground">Please connect your wallet to view transactions.</p>
         </div>
       </div>
     );
   }
   if (!contractAddress) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex min-h-[16rem] items-center justify-center rounded-xl bg-muted/30">
         <div className="text-center">
-          <BarChart3 className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <ChartBarIcon className="mx-auto mb-4 h-12 w-12 text-destructive" weight="duotone" />
           <h3 className="text-lg font-semibold">Configuration Error</h3>
-          <p className="text-muted-foreground">Contract address not properly configured</p>
+          <p className="text-muted-foreground">Contract address not properly configured.</p>
         </div>
       </div>
     );
   }
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">My Transactions</h2>
+    <div className="min-w-0 max-w-full space-y-6 overflow-x-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-xl font-semibold tracking-tight">Transactions</h2>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={refreshData} disabled={isLoading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            <ArrowClockwiseIcon className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} weight="regular" />
             Refresh
           </Button>
           <Button variant="outline" size="sm" onClick={exportTransactions} disabled={filteredTransactions.length === 0}>
-            <Download className="h-4 w-4 mr-2" />
+            <DownloadSimpleIcon className="mr-2 h-4 w-4" weight="regular" />
             Export
           </Button>
         </div>
       </div>
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <Card className="min-w-0 border-border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Current Balance</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <TrendUpIcon className="h-4 w-4 text-muted-foreground" weight="regular" />
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <Skeleton className="h-8 w-24" />
+              <Skeleton className="h-8 w-24 bg-muted" />
             ) : (
-              <div className="text-2xl font-bold">
+              <div className="text-xl font-semibold">
                 {stats.currentBalance.toFixed(4)} {SYMBOL}
               </div>
             )}
             <p className="text-xs text-muted-foreground">Available to claim</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="min-w-0 border-border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Sent</CardTitle>
-            <ArrowUpRight className="h-4 w-4 text-red-500" />
+            <ArrowUpRightIcon className="h-4 w-4 text-destructive" weight="regular" />
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <Skeleton className="h-8 w-24" />
+              <Skeleton className="h-8 w-24 bg-muted" />
             ) : (
-              <div className="text-2xl font-bold text-red-600">
+              <div className="text-xl font-semibold text-foreground">
                 {stats.totalSent.toFixed(4)} {SYMBOL}
               </div>
             )}
             <p className="text-xs text-muted-foreground">Outgoing transfers</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="min-w-0 border-border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Received</CardTitle>
-            <ArrowDownRight className="h-4 w-4 text-green-500" />
+            <ArrowDownRightIcon className="h-4 w-4 text-primary" weight="regular" />
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <Skeleton className="h-8 w-24" />
+              <Skeleton className="h-8 w-24 bg-muted" />
             ) : (
-              <div className="text-2xl font-bold text-green-600">
+              <div className="text-xl font-semibold text-foreground">
                 {stats.totalReceived.toFixed(4)} {SYMBOL}
               </div>
             )}
             <p className="text-xs text-muted-foreground">Incoming transfers</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="min-w-0 border-border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Fees</CardTitle>
-            <TrendingDown className="h-4 w-4 text-muted-foreground" />
+            <TrendDownIcon className="h-4 w-4 text-muted-foreground" weight="regular" />
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <Skeleton className="h-8 w-24" />
+              <Skeleton className="h-8 w-24 bg-muted" />
             ) : (
-              <div className="text-2xl font-bold">
+              <div className="text-xl font-semibold">
                 {stats.totalFees.toFixed(6)} {SYMBOL}
               </div>
             )}
             <p className="text-xs text-muted-foreground">Transaction fees paid</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="min-w-0 border-border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Transactions</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+            <ChartBarIcon className="h-4 w-4 text-muted-foreground" weight="regular" />
           </CardHeader>
           <CardContent>
-            {isLoading ? <Skeleton className="h-8 w-16" /> : <div className="text-2xl font-bold">{stats.totalTransactions}</div>}
+            {isLoading ? <Skeleton className="h-8 w-16 bg-muted" /> : <div className="text-xl font-semibold">{stats.totalTransactions}</div>}
             <p className="text-xs text-muted-foreground">All time activity</p>
           </CardContent>
         </Card>
       </div>
-      {/* Filters */}
-      <Card>
+      <Card className="min-w-0 border-border shadow-sm">
         <CardHeader>
-          <CardTitle className="text-lg">Filter Transactions</CardTitle>
+          <CardTitle className="text-base font-semibold">Filter Transactions</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <MagnifyingGlassIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" weight="regular" />
               <Input placeholder="Search by address, amount, or ID..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
             </div>
             <Select value={typeFilter} onValueChange={(value: 'all' | 'sent' | 'received') => setTypeFilter(value)}>
@@ -325,16 +326,15 @@ export function TransactionsTab() {
                 setDateFilter('all');
               }}
             >
-              <Filter className="h-4 w-4 mr-2" />
+              <FunnelSimpleIcon className="mr-2 h-4 w-4" weight="regular" />
               Clear Filters
             </Button>
           </div>
         </CardContent>
       </Card>
-      {/* Transaction List */}
-      <Card>
+      <Card className="min-w-0 border-border shadow-sm">
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle className="flex flex-wrap items-center justify-between gap-2">
             <span>Transaction History</span>
             <Badge variant="secondary">
               {filteredTransactions.length} of {transactions.length} transactions
@@ -365,7 +365,7 @@ export function TransactionsTab() {
               {filteredTransactions.map((tx) => (
                 <div key={tx.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
                   <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-full ${tx.type === 'sent' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>{tx.type === 'sent' ? <ArrowUpRight className="h-5 w-5" /> : <ArrowDownRight className="h-5 w-5" />}</div>
+                    <div className={`rounded-full p-2 ${tx.type === 'sent' ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>{tx.type === 'sent' ? <ArrowUpRightIcon className="h-5 w-5" weight="regular" /> : <ArrowDownRightIcon className="h-5 w-5" weight="regular" />}</div>
                     <div>
                       <p className="font-medium">
                         {tx.type === 'sent' ? 'Sent to' : 'Received from'}
@@ -374,7 +374,7 @@ export function TransactionsTab() {
                         </span>
                       </p>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Clock className="h-3 w-3" />
+                        <ClockIcon className="h-3 w-3" weight="regular" />
                         <span>{tx.date}</span>
                         <span>•</span>
                         <span>ID: {tx.id}</span>
@@ -390,7 +390,7 @@ export function TransactionsTab() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className={`text-lg font-bold ${tx.type === 'sent' ? 'text-red-600' : 'text-green-600'}`}>
+                    <p className={`text-lg font-bold ${tx.type === 'sent' ? 'text-destructive' : 'text-primary'}`}>
                       {tx.type === 'sent' ? '-' : '+'}
                       {parseFloat(tx.amount).toFixed(4)} {SYMBOL}
                     </p>
@@ -400,7 +400,7 @@ export function TransactionsTab() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <ChartBarIcon className="mx-auto mb-4 h-12 w-12 text-muted-foreground" weight="duotone" />
               <h3 className="text-lg font-semibold mb-2">No Transactions Found</h3>
               {searchTerm || typeFilter !== 'all' || dateFilter !== 'all' ? <p className="text-muted-foreground">Try adjusting your filters to see more transactions</p> : <p className="text-muted-foreground">Your transaction history will appear here once you start sending or receiving remittances</p>}
             </div>

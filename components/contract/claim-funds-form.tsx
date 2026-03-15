@@ -12,6 +12,7 @@ import { ConfirmationModal } from '@/components/ui/confirmation-modal';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { XCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { getContractAddress, CHAIN_ID } from '@/lib/constants';
 
 const REMITTANCE_ABI = parseAbi(['function claimRemittance() external', 'function getMyBalance() external view returns (uint256)', 'function getMyKYCStatus() external view returns (uint8)', 'function getMyWhitelistStatus() external view returns (bool)', 'function getMyBlacklistStatus() external view returns (bool)', 'function getMyFrozenStatus() external view returns (bool)', 'event Claimed(address indexed recipient, uint256 amount)']);
 enum KYCStatus {
@@ -22,13 +23,6 @@ enum KYCStatus {
 }
 const SYMBOL = process.env.NEXT_PUBLIC_SYMBOL;
 
-const getContractAddress = (): `0x${string}` | undefined => {
-  const address = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
-  if (!address || !address.startsWith('0x') || address.length !== 42) {
-    return undefined;
-  }
-  return address as `0x${string}`;
-};
 const getKYCStatusLabel = (status: number) => {
   switch (status) {
     case KYCStatus.NONE:
@@ -62,8 +56,6 @@ export function ClaimFundsForm() {
     }
   }, []);
 
-  const CORRECT_CHAIN_ID = 420420417;
-
   const {
     data: balance,
     refetch: refetchBalance,
@@ -73,7 +65,7 @@ export function ClaimFundsForm() {
     abi: REMITTANCE_ABI,
     functionName: 'getMyBalance',
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isConnected
     }
@@ -87,7 +79,7 @@ export function ClaimFundsForm() {
     abi: REMITTANCE_ABI,
     functionName: 'getMyKYCStatus',
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isConnected
     }
@@ -97,7 +89,7 @@ export function ClaimFundsForm() {
     abi: REMITTANCE_ABI,
     functionName: 'getMyWhitelistStatus',
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isConnected
     }
@@ -107,7 +99,7 @@ export function ClaimFundsForm() {
     abi: REMITTANCE_ABI,
     functionName: 'getMyBlacklistStatus',
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isConnected
     }
@@ -117,7 +109,7 @@ export function ClaimFundsForm() {
     abi: REMITTANCE_ABI,
     functionName: 'getMyFrozenStatus',
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isConnected
     }
@@ -125,7 +117,7 @@ export function ClaimFundsForm() {
 
   const { isLoading: isWaitingForTx, isSuccess: isTxConfirmed, isError: isTxFailed } = useWaitForTransactionReceipt({
     hash: txHash,
-    chainId: CORRECT_CHAIN_ID
+    chainId: CHAIN_ID
   });
 
   useEffect(() => {
@@ -180,14 +172,14 @@ export function ClaimFundsForm() {
       console.log('🚀 Claiming remittance:', {
         balance: formatEther(balance as bigint),
         contractAddress,
-        chainId: CORRECT_CHAIN_ID
+        chainId: CHAIN_ID
       });
       const hash = await writeContractAsync({
         address: contractAddress,
         abi: REMITTANCE_ABI,
         functionName: 'claimRemittance',
         args: [],
-        chainId: CORRECT_CHAIN_ID
+        chainId: CHAIN_ID
       });
       console.log('✅ Claim transaction submitted:', hash);
       setTxHash(hash);

@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { NetworkActivityWidget } from '@/components/analytics/network-activity-widget';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
+import { getContractAddress, CHAIN_ID } from '@/lib/constants';
 
 const SYMBOL = process.env.NEXT_PUBLIC_SYMBOL;
 
@@ -41,13 +42,6 @@ interface Transaction {
   status: 'completed' | 'pending';
   hash: string;
 }
-const getContractAddress = (): `0x${string}` | undefined => {
-  const address = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
-  if (!address || !address.startsWith('0x') || address.length !== 42) {
-    return undefined;
-  }
-  return address as `0x${string}`;
-};
 const getTierLabel = (tier: number) => {
   switch (tier) {
     case UserTier.NONE:
@@ -99,7 +93,6 @@ export function OverviewTab({ onTabChange }: OverviewTabProps) {
     const addr = getContractAddress();
     setContractAddress(addr);
   }, []);
-  const CORRECT_CHAIN_ID = 420420417;
 
   const {
     data: balance,
@@ -111,7 +104,7 @@ export function OverviewTab({ onTabChange }: OverviewTabProps) {
     abi: REMITTANCE_ABI,
     functionName: 'getMyBalance',
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isConnected
     }
@@ -125,7 +118,7 @@ export function OverviewTab({ onTabChange }: OverviewTabProps) {
     abi: REMITTANCE_ABI,
     functionName: 'getMyKYCStatus',
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isConnected
     }
@@ -140,7 +133,7 @@ export function OverviewTab({ onTabChange }: OverviewTabProps) {
     abi: REMITTANCE_ABI,
     functionName: 'getMyTier',
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isConnected
     }
@@ -156,7 +149,7 @@ export function OverviewTab({ onTabChange }: OverviewTabProps) {
     functionName: 'getTierLimit',
     args: [userTier || 0],
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isConnected && userTier !== undefined
     }
@@ -171,7 +164,7 @@ export function OverviewTab({ onTabChange }: OverviewTabProps) {
     abi: REMITTANCE_ABI,
     functionName: 'getMyRemainingLimit',
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isConnected
     }
@@ -181,7 +174,7 @@ export function OverviewTab({ onTabChange }: OverviewTabProps) {
     abi: REMITTANCE_ABI,
     functionName: 'getMyWhitelistStatus',
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isConnected
     }
@@ -191,7 +184,7 @@ export function OverviewTab({ onTabChange }: OverviewTabProps) {
     abi: REMITTANCE_ABI,
     functionName: 'getMyBlacklistStatus',
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isConnected
     }
@@ -201,7 +194,7 @@ export function OverviewTab({ onTabChange }: OverviewTabProps) {
     abi: REMITTANCE_ABI,
     functionName: 'getMyFrozenStatus',
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isConnected
     }
@@ -210,7 +203,7 @@ export function OverviewTab({ onTabChange }: OverviewTabProps) {
     address: contractAddress,
     abi: REMITTANCE_ABI,
     eventName: 'Sent',
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     onLogs(logs) {
       logs.forEach((log) => {
         if (log.args?.sender?.toLowerCase() === address?.toLowerCase()) {
@@ -253,7 +246,7 @@ export function OverviewTab({ onTabChange }: OverviewTabProps) {
     address: contractAddress,
     abi: REMITTANCE_ABI,
     eventName: 'Claimed',
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     onLogs(logs) {
       logs.forEach((log) => {
         if (log.args?.recipient?.toLowerCase() === address?.toLowerCase()) {
@@ -322,12 +315,11 @@ export function OverviewTab({ onTabChange }: OverviewTabProps) {
     );
   }
   return (
-    <div className="space-y-6">
-      {/* Header with Refresh Button */}
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Account Overview</h2>
+    <div className="min-w-0 max-w-full space-y-6 overflow-x-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-xl font-semibold tracking-tight">Overview</h2>
         <Button variant="outline" size="sm" onClick={refreshAllData} disabled={isRefreshing}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
       </div>

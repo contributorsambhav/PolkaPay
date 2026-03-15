@@ -1,6 +1,14 @@
 'use client';
 
-import { AlertTriangle, CheckCircle, Clock, DollarSign, Download, Eye, RefreshCw, Search, TrendingDown, TrendingUp } from 'lucide-react';
+import {
+  WarningIcon,
+  CheckCircleIcon,
+  CurrencyCircleDollarIcon,
+  DownloadSimpleIcon,
+  ArrowClockwiseIcon,
+  MagnifyingGlassIcon,
+  TrendUpIcon,
+} from '@phosphor-icons/react';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
@@ -14,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
+import { getContractAddress, CHAIN_ID } from '@/lib/constants';
 
 interface Transaction {
   txnId: number;
@@ -34,14 +43,6 @@ interface TransactionStats {
 }
 const REMITTANCE_ABI = parseAbi(['function getAllTransactions() external view returns ((address,address,uint256,uint256,uint256,uint256)[] memory)', 'function getTotalTransactions() external view returns (uint256)', 'function getContractBalance() external view returns (uint256)', 'function owner() external view returns (address)', 'function getTierLimit(uint8 tier) external view returns (uint256)', 'function getTransaction(uint256 txnId) external view returns (address,address,uint256,uint256,uint256)', 'event Sent(address indexed sender, address indexed recipient, uint256 amount)', 'event Claimed(address indexed recipient, uint256 amount)', 'event TransactionRecorded(uint256 indexed txnId, address indexed sender, address indexed recipient, uint256 amount, uint256 fee)', 'struct Transaction { address sender; address recipient; uint256 amount; uint256 fee; uint256 timestamp; uint256 txnId; }']);
 const SYMBOL = process.env.NEXT_PUBLIC_SYMBOL;
-
-const getContractAddress = (): `0x${string}` | undefined => {
-  const address = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
-  if (!address || !address.startsWith('0x') || address.length !== 42) {
-    return undefined;
-  }
-  return address as `0x${string}`;
-};
 
 export function TransactionAnalytics() {
   const { address, isConnected } = useAccount();
@@ -68,7 +69,6 @@ export function TransactionAnalytics() {
       setIsLoading(false);
     }
   }, []);
-  const CORRECT_CHAIN_ID = 420420417;
 
   const {
     data: allTransactions,
@@ -81,7 +81,7 @@ export function TransactionAnalytics() {
     abi: REMITTANCE_ABI,
     functionName: 'getAllTransactions',
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isConnected
     }
@@ -95,7 +95,7 @@ export function TransactionAnalytics() {
     abi: REMITTANCE_ABI,
     functionName: 'getTotalTransactions',
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isConnected
     }
@@ -105,7 +105,7 @@ export function TransactionAnalytics() {
     abi: REMITTANCE_ABI,
     functionName: 'getContractBalance',
     account: address,
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isConnected
     }
@@ -114,7 +114,7 @@ export function TransactionAnalytics() {
     address: contractAddress,
     abi: REMITTANCE_ABI,
     eventName: 'TransactionRecorded',
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     onLogs(logs) {
       console.log('New transaction recorded:', logs);
       refetchTransactions();
@@ -167,9 +167,9 @@ export function TransactionAnalytics() {
     }
     setVolumeData(chartData);
     setStatusDistribution([
-      { name: 'Completed', value: processedTransactions.length, color: '#22c55e' },
-      { name: 'Pending', value: 0, color: '#f59e0b' },
-      { name: 'Failed', value: 0, color: '#ef4444' }
+      { name: 'Completed', value: processedTransactions.length, color: 'oklch(0.42 0.09 265)' },
+      { name: 'Pending', value: 0, color: 'oklch(0.72 0.16 75)' },
+      { name: 'Failed', value: 0, color: 'oklch(0.55 0.22 25)' }
     ]);
     const totalVolume24hNum = parseFloat(stats.totalVolume24h) || totalVolume;
     setTierAnalytics([
@@ -188,13 +188,13 @@ export function TransactionAnalytics() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-primary/10 text-primary border-border';
       case 'pending':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        return 'bg-muted text-muted-foreground border-border';
       case 'failed':
-        return 'bg-red-100 text-red-800 border-red-200';
+        return 'bg-destructive/10 text-destructive border-border';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'bg-muted text-muted-foreground border-border';
     }
   };
   const formatDate = (timestamp: bigint) => {
@@ -223,120 +223,104 @@ export function TransactionAnalytics() {
   };
   if (!isConnected) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex min-h-[16rem] items-center justify-center rounded-xl bg-muted/30">
         <div className="text-center">
-          <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+          <WarningIcon className="mx-auto mb-4 h-10 w-10 text-muted-foreground sm:h-12 sm:w-12" weight="duotone" />
           <h3 className="text-lg font-semibold">Wallet Not Connected</h3>
-          <p className="text-muted-foreground">Please connect your wallet to view transaction data</p>
+          <p className="text-muted-foreground">Please connect your wallet to view transaction data.</p>
         </div>
       </div>
     );
   }
   if (!contractAddress) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex min-h-[16rem] items-center justify-center rounded-xl bg-muted/30">
         <div className="text-center">
-          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <WarningIcon className="mx-auto mb-4 h-10 w-10 text-destructive sm:h-12 sm:w-12" weight="duotone" />
           <h3 className="text-lg font-semibold">Configuration Error</h3>
-          <p className="text-muted-foreground">Contract address not properly configured</p>
+          <p className="text-muted-foreground">Contract address not properly configured.</p>
         </div>
       </div>
     );
   }
   return (
-    <div className="space-y-6">
-      {/* Header with refresh */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Transaction Analytics</h2>
+    <div className="min-w-0 max-w-full space-y-6 overflow-x-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-xl font-semibold tracking-tight">Transactions</h2>
         <Button variant="outline" size="sm" onClick={refreshData} disabled={isLoading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+          <ArrowClockwiseIcon className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} weight="regular" />
           Refresh
         </Button>
       </div>
-      {/* Analytics Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="min-w-0 border-border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Volume (24h)</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CurrencyCircleDollarIcon className="h-4 w-4 text-muted-foreground" weight="regular" />
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <Skeleton className="h-8 w-24" />
+              <Skeleton className="h-8 w-24 bg-muted" />
             ) : (
               <>
-                <div className="text-2xl font-bold">
+                <div className="text-xl font-semibold">
                   {stats.totalVolume24h} {SYMBOL}
                 </div>
-                <div className="flex items-center text-xs text-green-600">
-                  <TrendingUp className="h-3 w-3 mr-1" />
-                  Live data
-                </div>
+                <p className="text-xs text-muted-foreground">Live data</p>
               </>
             )}
           </CardContent>
         </Card>
-        <Card>
+        <Card className="min-w-0 border-border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Transactions (24h)</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <TrendUpIcon className="h-4 w-4 text-muted-foreground" weight="regular" />
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <Skeleton className="h-8 w-16" />
+              <Skeleton className="h-8 w-16 bg-muted" />
             ) : (
               <>
-                <div className="text-2xl font-bold">{stats.totalTransactions24h}</div>
-                <div className="flex items-center text-xs text-green-600">
-                  <TrendingUp className="h-3 w-3 mr-1" />
-                  Live data
-                </div>
+                <div className="text-xl font-semibold">{stats.totalTransactions24h}</div>
+                <p className="text-xs text-muted-foreground">Live data</p>
               </>
             )}
           </CardContent>
         </Card>
-        <Card>
+        <Card className="min-w-0 border-border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Avg Transaction Size</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CurrencyCircleDollarIcon className="h-4 w-4 text-muted-foreground" weight="regular" />
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <Skeleton className="h-8 w-20" />
+              <Skeleton className="h-8 w-20 bg-muted" />
             ) : (
               <>
-                <div className="text-2xl font-bold">
+                <div className="text-xl font-semibold">
                   {stats.avgTransactionSize} {SYMBOL}
                 </div>
-                <div className="flex items-center text-xs text-blue-600">
-                  <TrendingUp className="h-3 w-3 mr-1" />
-                  Live calculation
-                </div>
+                <p className="text-xs text-muted-foreground">Live calculation</p>
               </>
             )}
           </CardContent>
         </Card>
-        <Card>
+        <Card className="min-w-0 border-border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+            <CheckCircleIcon className="h-4 w-4 text-muted-foreground" weight="regular" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.successRate}%</div>
-            <div className="flex items-center text-xs text-green-600">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              High reliability
-            </div>
+            <div className="text-xl font-semibold">{stats.successRate}%</div>
+            <p className="text-xs text-muted-foreground">High reliability</p>
           </CardContent>
         </Card>
       </div>
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Volume Chart */}
-        <Card>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card className="min-w-0 border-border shadow-sm">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Transaction Volume</CardTitle>
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+              <CardTitle className="text-base font-semibold">Transaction Volume</CardTitle>
               <Select value={timeRange} onValueChange={setTimeRange}>
                 <SelectTrigger className="w-32">
                   <SelectValue />
@@ -351,7 +335,7 @@ export function TransactionAnalytics() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <Skeleton className="h-[300px] w-full" />
+              <Skeleton className="h-[300px] w-full bg-muted" />
             ) : (
               <ChartContainer
                 config={{
@@ -375,26 +359,25 @@ export function TransactionAnalytics() {
             )}
           </CardContent>
         </Card>
-        {/* Status Distribution */}
-        <Card>
+        <Card className="min-w-0 border-border shadow-sm">
           <CardHeader>
-            <CardTitle>Transaction Status Distribution</CardTitle>
+            <CardTitle className="text-base font-semibold">Transaction Status Distribution</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <Skeleton className="h-[300px] w-full" />
+              <Skeleton className="h-[300px] w-full bg-muted" />
             ) : (
               <ChartContainer
                 config={{
-                  completed: { label: 'Completed', color: '#22c55e' },
-                  pending: { label: 'Pending', color: '#f59e0b' },
-                  failed: { label: 'Failed', color: '#ef4444' }
+                  completed: { label: 'Completed', color: 'oklch(0.42 0.09 265)' },
+                  pending: { label: 'Pending', color: 'oklch(0.72 0.16 75)' },
+                  failed: { label: 'Failed', color: 'oklch(0.55 0.22 25)' }
                 }}
                 className="h-[300px]"
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={statusDistribution} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                    <Pie data={statusDistribution} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}>
                       {statusDistribution.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
@@ -407,27 +390,26 @@ export function TransactionAnalytics() {
           </CardContent>
         </Card>
       </div>
-      {/* Tier Analytics */}
-      <Card>
+      <Card className="min-w-0 border-border shadow-sm">
         <CardHeader>
-          <CardTitle>Volume by User Tier (Estimated)</CardTitle>
+          <CardTitle className="text-base font-semibold">Volume by User Tier (Estimated)</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
               {[1, 2, 3, 4].map((i) => (
-                <Skeleton key={i} className="h-24 w-full" />
+                <Skeleton key={i} className="h-24 w-full bg-muted" />
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
               {tierAnalytics.map((tier) => (
-                <div key={tier.tier} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <Badge className={tier.tier === 'VIP' ? 'bg-purple-100 text-purple-800 border-purple-200' : tier.tier === 'TIER3' ? 'bg-blue-100 text-blue-800 border-blue-200' : tier.tier === 'TIER2' ? 'bg-green-100 text-green-800 border-green-200' : 'bg-yellow-100 text-yellow-800 border-yellow-200'}>{tier.tier}</Badge>
+                <div key={tier.tier} className="rounded-lg border border-border bg-card p-4">
+                  <div className="mb-2 flex items-center justify-between">
+                    <Badge variant="secondary" className="border-border">{tier.tier}</Badge>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-2xl font-bold">
+                    <p className="text-xl font-semibold">
                       {tier.volume} {SYMBOL}
                     </p>
                     <p className="text-sm text-muted-foreground">{tier.count} transactions</p>
@@ -441,15 +423,14 @@ export function TransactionAnalytics() {
           )}
         </CardContent>
       </Card>
-      {/* Transaction List */}
-      <Card>
+      <Card className="min-w-0 border-border shadow-sm">
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Recent Transactions</CardTitle>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search by address or ID..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 w-64" />
+          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="text-base font-semibold">Recent Transactions</CardTitle>
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <div className="relative min-w-0 flex-1 sm:w-56">
+                <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" weight="regular" />
+                <Input placeholder="Search by address or ID..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="min-w-0 pl-10" />
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-32">
@@ -463,7 +444,7 @@ export function TransactionAnalytics() {
                 </SelectContent>
               </Select>
               <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
+                <DownloadSimpleIcon className="mr-2 h-4 w-4" weight="regular" />
                 Export
               </Button>
             </div>
@@ -477,15 +458,15 @@ export function TransactionAnalytics() {
               ))}
             </div>
           ) : hasErrorTransactions ? (
-            <div className="text-center py-8 text-red-500">
-              <AlertTriangle className="h-12 w-12 mx-auto mb-4" />
+            <div className="py-8 text-center text-destructive">
+              <WarningIcon className="mx-auto mb-4 h-10 w-10 sm:h-12 sm:w-12" weight="duotone" />
               <p>Error loading transactions</p>
             </div>
           ) : filteredTransactions.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <div className="py-8 text-center text-muted-foreground">
+              <TrendUpIcon className="mx-auto mb-4 h-12 w-12 opacity-50" weight="duotone" />
               <p>No transactions found</p>
-              <p className="text-sm">Transactions will appear here once users start sending remittances</p>
+              <p className="text-sm">Transactions will appear here once users start sending remittances.</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -494,11 +475,11 @@ export function TransactionAnalytics() {
                 .sort((a, b) => b.txnId - a.txnId)
                 .slice(0, 10)
                 .map((tx) => (
-                  <div key={tx.txnId} className="border rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-full bg-green-100">
-                          <CheckCircle className="h-4 w-4 text-green-600" />
+                  <div key={tx.txnId} className="rounded-lg border border-border bg-card p-4">
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="rounded-full bg-primary/10 p-2">
+                          <CheckCircleIcon className="h-4 w-4 text-primary" weight="regular" />
                         </div>
                         <div>
                           <p className="font-medium">
@@ -530,12 +511,6 @@ export function TransactionAnalytics() {
                         <p className="font-mono">{formatDate(tx.timestamp)}</p>
                       </div>
                     </div>
-                    {/* <div className="flex items-center gap-2 mt-3 pt-3 border-t">
-                  <Button variant="outline" size="sm">
-                  <Eye className="h-4 w-4 mr-2" />
-                  View Details
-                  </Button>
-                </div> */}
                   </div>
                 ))}
             </div>

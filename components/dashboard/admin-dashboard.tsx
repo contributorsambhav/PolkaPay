@@ -1,58 +1,45 @@
 'use client';
 
-import { Activity, FileCheck, LogOut, Settings, Shield, TrendingUp, Users } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
 
 import { AdminKYCManagement } from '@/components/kyc/admin-kyc-management';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { OverviewTab } from '@/components/tabs/admin/overview-tab';
 import { SettingsTab } from '@/components/tabs/admin/settings-tab';
 import { TransactionAnalytics } from '@/components/analytics/transaction-analytics';
 import { UsersTab } from '@/components/tabs/admin/users-tab';
 import { useAuth } from '@/contexts/auth-context';
-import { useState } from 'react';
+import { ADMIN_NAV_ITEMS, type AdminSection } from '@/lib/nav-config';
 
-export function AdminDashboard() {
-  const { user, logout } = useAuth();
-  const [selectedTab, setSelectedTab] = useState('overview');
+export function AdminDashboard({ initialTab = 'overview' }: { initialTab?: AdminSection }) {
+  const { user } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+
   if (!user) return null;
-  const renderTabContent = () => {
-    switch (selectedTab) {
-      case 'overview':
-        return <OverviewTab onTabChange={setSelectedTab} />;
-      case 'kyc':
-        return <AdminKYCManagement />;
-      case 'users':
-        return <UsersTab />;
-      case 'transactions':
-        return <TransactionAnalytics />;
-      case 'settings':
-        return <SettingsTab />;
-      default:
-        return <OverviewTab onTabChange={setSelectedTab} />;
-    }
+
+  const handleTabChange = (tab: AdminSection) => {
+    const item = ADMIN_NAV_ITEMS.find((n) => n.id === tab);
+    router.push(item ? item.href : '/admin');
   };
+
+  const currentTab: AdminSection = (() => {
+    const base = pathname.replace(/^\/admin\/?/, '') || 'overview';
+    return (ADMIN_NAV_ITEMS.some((n) => n.id === base) ? base : initialTab) as AdminSection;
+  })();
+
+  const sectionMap: Record<AdminSection, React.ReactNode> = {
+    overview: <OverviewTab onTabChange={(tab) => handleTabChange(tab as AdminSection)} />,
+    kyc: <AdminKYCManagement />,
+    users: <UsersTab />,
+    transactions: <TransactionAnalytics />,
+    settings: <SettingsTab />,
+  };
+
+  const content = sectionMap[currentTab] ?? sectionMap.overview;
+
   return (
-    <div className="bg-background pt-2">
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
-        {/* Navigation Tabs */}
-        <div className="flex gap-2 border-b">
-          {[
-            { id: 'overview', label: 'Overview', icon: Activity },
-            { id: 'kyc', label: 'KYC Management', icon: FileCheck },
-            { id: 'users', label: 'User Management', icon: Users },
-            { id: 'transactions', label: 'Transactions', icon: TrendingUp },
-            { id: 'settings', label: 'System Settings', icon: Settings }
-          ].map((tab) => (
-            <Button key={tab.id} variant={selectedTab === tab.id ? 'default' : 'ghost'} onClick={() => setSelectedTab(tab.id)} className="flex items-center gap-2">
-              <tab.icon className="h-4 w-4" />
-              {tab.label}
-            </Button>
-          ))}
-        </div>
-        {/* Tab Content */}
-        {renderTabContent()}
-      </div>
+    <div className="min-w-0 max-w-full overflow-x-hidden space-y-6">
+      {content}
     </div>
   );
 }

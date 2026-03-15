@@ -1,14 +1,19 @@
 'use client';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, Shield, TrendingUp, Wallet } from 'lucide-react';
+import {
+  WarningCircleIcon,
+  ShieldIcon,
+  TrendUpIcon,
+  WalletIcon,
+} from '@phosphor-icons/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 
 const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL;
-const CHAIN_ID = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID);
+const CHAIN_ID = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID as string);
 const NETWORK_NAME = process.env.NEXT_PUBLIC_NETWORK_NAME;
 const SYMBOL = process.env.NEXT_PUBLIC_SYMBOL;
 const EXPLORER_URL = process.env.NEXT_PUBLIC_EXPLORER_URL || 'https://blockscout-testnet.polkadot.io';
@@ -186,34 +191,38 @@ export function LoginForm() {
     addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : '';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-6">
+    <div className="flex min-h-svh min-w-0 items-center justify-center bg-background p-4 sm:p-6">
+      <div className="w-full max-w-md min-w-0 space-y-6">
         {/* Header */}
-        <div className="text-center space-y-2">
+        <header className="space-y-4 text-center">
           <div className="flex justify-center">
-            <div className="bg-gradient-to-br from-blue-600 to-purple-600 p-4 rounded-full shadow-lg">
-              <Shield className="h-8 w-8 text-white" />
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
+              <ShieldIcon className="h-7 w-7 shrink-0" size={28} />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-balance bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            RemitPay Dashboard
-          </h1>
-          <p className="text-muted-foreground text-pretty">
-            Secure KYC-enabled financial platform for global remittances
-          </p>
-        </div>
+          <div className="space-y-1">
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+              RemitPay Dashboard
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Secure KYC-enabled financial platform for global remittances
+            </p>
+          </div>
+        </header>
 
         {/* MetaMask Not Installed Alert */}
         {!isMetaMaskInstalled && (
-          <Alert className="border-orange-200 bg-orange-50">
-            <AlertCircle className="h-4 w-4 text-orange-600" />
-            <AlertDescription className="text-orange-800">
+          <Alert className="border-border bg-warning/10">
+            <WarningCircleIcon className="h-4 w-4 text-warning-foreground" size={16} />
+            <AlertDescription className="text-foreground">
               <div className="space-y-2">
-                <p className="font-medium">MetaMask Required</p>
-                <p className="text-sm">MetaMask is not installed. Install it to continue.</p>
+                <p className="font-medium">MetaMask required</p>
+                <p className="text-sm text-muted-foreground">
+                  Install MetaMask to connect your wallet and continue.
+                </p>
                 <Button
                   onClick={() => window.open('https://metamask.io/download/', '_blank')}
-                  className="w-full mt-2 bg-orange-600 hover:bg-orange-700"
+                  className="mt-2 w-full"
                 >
                   Install MetaMask
                 </Button>
@@ -225,30 +234,34 @@ export function LoginForm() {
         {/* Connection Status */}
         {isConnected && address && (
           <div className="space-y-3">
-            <Alert className="border-green-200 bg-green-50">
-              <Shield className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800">
-                <div className="flex items-center justify-between">
-                  <span>Wallet Connected</span>
-                  <span className="text-xs font-mono">{formatAddress(address)}</span>
+            <Alert className="border-border bg-success/10">
+              <ShieldIcon className="h-4 w-4 text-success" size={16} />
+              <AlertDescription className="text-foreground">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium">Wallet connected</span>
+                  <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                    {formatAddress(address)}
+                  </span>
                 </div>
               </AlertDescription>
             </Alert>
 
             {/* Network Status */}
             {!isCorrectNetwork && (
-              <Alert className="border-yellow-200 bg-yellow-50">
-                <AlertCircle className="h-4 w-4 text-yellow-600" />
-                <AlertDescription className="text-yellow-800">
+              <Alert className="border-border bg-warning/10">
+                <WarningCircleIcon className="h-4 w-4 text-warning-foreground" size={16} />
+                <AlertDescription className="text-foreground">
                   <div className="space-y-2">
-                    <p>Wrong network detected. Please switch to {NETWORK_NAME}.</p>
+                    <p className="text-sm">
+                      Wrong network. Switch to {NETWORK_NAME} to continue.
+                    </p>
                     <Button
                       onClick={handleAddAndSwitchNetwork}
                       disabled={isAddingNetwork}
                       size="sm"
-                      className="w-full bg-yellow-600 hover:bg-yellow-700"
+                      className="w-full"
                     >
-                      {isAddingNetwork ? 'Adding Network...' : `Add & Switch to ${NETWORK_NAME}`}
+                      {isAddingNetwork ? 'Adding network…' : `Add & switch to ${NETWORK_NAME}`}
                     </Button>
                   </div>
                 </AlertDescription>
@@ -259,29 +272,29 @@ export function LoginForm() {
 
         {/* Error Display */}
         {connectionError && (
-          <Alert className="border-red-200 bg-red-50">
-            <AlertCircle className="h-4 w-4 text-red-600" />
-            <AlertDescription className="text-red-800">{connectionError}</AlertDescription>
+          <Alert className="border-border bg-destructive/10">
+            <WarningCircleIcon className="h-4 w-4 text-destructive" size={16} />
+            <AlertDescription className="text-foreground">{connectionError}</AlertDescription>
           </Alert>
         )}
 
         {/* Main Login Card */}
-        <Card className="shadow-lg border-0 ring-1 ring-gray-200">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Wallet className="h-5 w-5 text-blue-600" />
+        <Card className="border border-border bg-card shadow-sm">
+          <CardHeader className="space-y-1.5">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <WalletIcon className="h-5 w-5 text-primary" size={20} />
               {isConnected && isCorrectNetwork
-                ? 'Ready to Use'
+                ? 'Ready to use'
                 : isConnected
-                  ? 'Network Error'
-                  : 'Connect Wallet'}
+                  ? 'Network error'
+                  : 'Connect wallet'}
             </CardTitle>
             <CardDescription>
               {isConnected && isCorrectNetwork
-                ? 'Your wallet is connected to the correct network. The dashboard will load automatically.'
+                ? 'Your wallet is on the correct network. Continue to load the dashboard.'
                 : isConnected
-                  ? `Switch to ${NETWORK_NAME} to continue`
-                  : 'Connect your MetaMask wallet to access the dashboard'}
+                  ? `Switch to ${NETWORK_NAME} to continue.`
+                  : 'Connect your MetaMask wallet to access the dashboard.'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -289,43 +302,41 @@ export function LoginForm() {
               <Button
                 onClick={handleConnect}
                 disabled={isProcessing || !isMetaMaskInstalled}
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-200"
+                className="w-full"
+                size="lg"
               >
-                <Wallet className="w-4 h-4 mr-2" />
-                {isProcessing ? 'Setting Up...' : `Connect & Add ${NETWORK_NAME}`}
+                <WalletIcon className="h-4 w-4 shrink-0" size={16} />
+                {isProcessing ? 'Setting up…' : `Connect & add ${NETWORK_NAME}`}
               </Button>
             ) : (
               <div className="space-y-4">
-                <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-sm font-medium text-green-800">Connected</span>
+                <div className="rounded-lg border border-border bg-muted/50 px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 shrink-0 rounded-full bg-success animate-pulse" />
+                    <span className="text-sm font-medium text-foreground">Connected</span>
                   </div>
-                  <div className="text-xs text-green-700 font-mono mt-1">{address}</div>
+                  <p className="mt-1 font-mono text-xs text-muted-foreground">{address}</p>
                 </div>
                 {!isCorrectNetwork && (
                   <Button
                     onClick={handleAddAndSwitchNetwork}
                     disabled={isAddingNetwork}
-                    className="w-full bg-blue-600 hover:bg-blue-700"
+                    className="w-full"
                   >
-                    {isAddingNetwork ? 'Adding Network...' : `Switch to ${NETWORK_NAME}`}
+                    {isAddingNetwork ? 'Adding network…' : `Switch to ${NETWORK_NAME}`}
                   </Button>
                 )}
                 {isCorrectNetwork && (
-                  <Button
-                    onClick={handleContinue}
-                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
-                  >
+                  <Button onClick={handleContinue} className="w-full">
                     Continue
                   </Button>
                 )}
                 <Button
                   onClick={handleDisconnect}
                   variant="outline"
-                  className="w-full text-red-600 border-red-200 hover:bg-red-50"
+                  className="w-full border-border text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                 >
-                  Disconnect Wallet
+                  Disconnect wallet
                 </Button>
               </div>
             )}
@@ -333,24 +344,24 @@ export function LoginForm() {
         </Card>
 
         {/* Features */}
-        <div className="grid grid-cols-3 gap-4 text-center">
+        <div className="grid grid-cols-3 gap-3 text-center sm:gap-4">
           <div className="space-y-2">
-            <div className="bg-blue-100 p-3 rounded-full mx-auto w-fit">
-              <Shield className="h-4 w-4 text-blue-600" />
+            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-muted text-primary">
+              <ShieldIcon className="h-4 w-4 shrink-0" size={16} />
             </div>
-            <p className="text-xs text-muted-foreground">KYC Verified</p>
+            <p className="text-xs text-muted-foreground">KYC verified</p>
           </div>
           <div className="space-y-2">
-            <div className="bg-green-100 p-3 rounded-full mx-auto w-fit">
-              <TrendingUp className="h-4 w-4 text-green-600" />
+            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-muted text-primary">
+              <TrendUpIcon className="h-4 w-4 shrink-0" size={16} />
             </div>
-            <p className="text-xs text-muted-foreground">Daily Limits</p>
+            <p className="text-xs text-muted-foreground">Daily limits</p>
           </div>
           <div className="space-y-2">
-            <div className="bg-purple-100 p-3 rounded-full mx-auto w-fit">
-              <Wallet className="h-4 w-4 text-purple-600" />
+            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-muted text-primary">
+              <WalletIcon className="h-4 w-4 shrink-0" size={16} />
             </div>
-            <p className="text-xs text-muted-foreground">Secure Wallet</p>
+            <p className="text-xs text-muted-foreground">Secure wallet</p>
           </div>
         </div>
       </div>

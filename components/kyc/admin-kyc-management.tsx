@@ -1,7 +1,17 @@
 'use client';
 
+import {
+  WarningIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  EyeIcon,
+  FileTextIcon,
+  ArrowClockwiseIcon,
+  MagnifyingGlassIcon,
+  UsersIcon,
+  XCircleIcon,
+} from '@phosphor-icons/react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, AlertTriangle, CheckCircle, Clock, Eye, FileCheck, RefreshCw, Search, Users, XCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatEther, parseAbi } from 'viem';
@@ -17,16 +27,9 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { getContractAddress, CHAIN_ID } from '@/lib/constants';
 
 const REMITTANCE_ABI = parseAbi(['function getPendingKYC() external view returns (address[] memory)', 'function getKYCRequest(address user) external view returns (string memory documentHash, uint256 timestamp, uint8 status, string memory rejectionReason)', 'function getUserInfo(address user) external view returns (uint8 tier, uint256 dailyLimit, uint256 todayUsed, uint256 balance, bool isWhitelistedUser, bool isBlacklistedUser, bool isFrozenUser, uint8 kycStatus)', 'function approveKYC(address user, uint8 tier) external', 'function rejectKYC(address user, string calldata reason) external', 'function batchApprove(address[] calldata users, uint8[] calldata tiers) external', 'function owner() external view returns (address)', 'function getTierLimit(uint8 tier) external view returns (uint256)', 'function getAllKYCUsers() external view returns (address[] memory)']);
-
-const getContractAddress = (): `0x${string}` | undefined => {
-  const address = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
-  if (!address || !address.startsWith('0x') || address.length !== 42) {
-    return undefined;
-  }
-  return address as `0x${string}`;
-};
 
 const KYCStatus = {
   0: 'NONE',
@@ -199,13 +202,11 @@ export function AdminKYCManagement() {
     }
   }, []);
 
-  const CORRECT_CHAIN_ID = 420420417;
-
   const { data: contractOwner, refetch: refetchOwner } = useReadContract({
     address: contractAddress,
     abi: REMITTANCE_ABI,
     functionName: 'owner',
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && !!address && isConnected
     }
@@ -222,7 +223,7 @@ export function AdminKYCManagement() {
     account: address,
     abi: REMITTANCE_ABI,
     functionName: 'getPendingKYC',
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && !!address && isConnected && isAdmin
     }
@@ -233,7 +234,7 @@ export function AdminKYCManagement() {
     account: address,
     abi: REMITTANCE_ABI,
     functionName: 'getAllKYCUsers',
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isAdmin
     }
@@ -244,7 +245,7 @@ export function AdminKYCManagement() {
     abi: REMITTANCE_ABI,
     functionName: 'getTierLimit',
     args: [1],
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isAdmin
     }
@@ -255,7 +256,7 @@ export function AdminKYCManagement() {
     abi: REMITTANCE_ABI,
     functionName: 'getTierLimit',
     args: [2],
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isAdmin
     }
@@ -266,7 +267,7 @@ export function AdminKYCManagement() {
     abi: REMITTANCE_ABI,
     functionName: 'getTierLimit',
     args: [3],
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isAdmin
     }
@@ -277,7 +278,7 @@ export function AdminKYCManagement() {
     abi: REMITTANCE_ABI,
     functionName: 'getTierLimit',
     args: [4],
-    chainId: CORRECT_CHAIN_ID,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!contractAddress && isAdmin
     }
@@ -372,7 +373,7 @@ export function AdminKYCManagement() {
         abi: REMITTANCE_ABI,
         functionName: 'approveKYC',
         args: [userAddress as `0x${string}`, tier],
-        chainId: CORRECT_CHAIN_ID
+        chainId: CHAIN_ID
       });
     } catch (error) {
       console.error('Error approving KYC:', error);
@@ -394,7 +395,7 @@ export function AdminKYCManagement() {
         abi: REMITTANCE_ABI,
         functionName: 'rejectKYC',
         args: [userAddress as `0x${string}`, reason],
-        chainId: CORRECT_CHAIN_ID
+        chainId: CHAIN_ID
       });
     } catch (error) {
       console.error('Error rejecting KYC:', error);
@@ -417,7 +418,7 @@ export function AdminKYCManagement() {
         abi: REMITTANCE_ABI,
         functionName: 'batchApprove',
         args: [addresses, tiers],
-        chainId: CORRECT_CHAIN_ID
+        chainId: CHAIN_ID
       });
     } catch (error) {
       console.error('Error batch approving:', error);
@@ -478,67 +479,58 @@ export function AdminKYCManagement() {
   };
 
   const renderErrorState = () => (
-    <div className="text-sm text-red-500 flex items-center gap-2">
-      <AlertTriangle className="h-4 w-4" />
+    <div className="flex items-center gap-2 text-sm text-destructive">
+      <WarningIcon className="h-4 w-4" weight="regular" />
       Error loading admin data
     </div>
   );
 
   if (!isConnected) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileCheck className="h-5 w-5" />
-            Admin KYC Management
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <AlertTriangle className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
-            <p className="text-muted-foreground">Please connect your wallet to access admin panel</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="min-w-0 max-w-full space-y-6 overflow-x-hidden">
+        <h2 className="text-xl font-semibold tracking-tight">KYC Management</h2>
+        <Card className="border-border shadow-sm">
+          <CardContent className="pt-6">
+            <div className="py-8 text-center">
+              <WarningIcon className="mx-auto mb-2 h-8 w-8 text-muted-foreground" weight="duotone" />
+              <p className="text-muted-foreground">Please connect your wallet to access the admin panel.</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   if (!contractAddress) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileCheck className="h-5 w-5" />
-            Admin KYC Management
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
-            <p className="text-muted-foreground">Contract address not configured</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="min-w-0 max-w-full space-y-6 overflow-x-hidden">
+        <h2 className="text-xl font-semibold tracking-tight">KYC Management</h2>
+        <Card className="border-border shadow-sm">
+          <CardContent className="pt-6">
+            <div className="py-8 text-center">
+              <WarningIcon className="mx-auto mb-2 h-8 w-8 text-destructive" weight="duotone" />
+              <p className="text-muted-foreground">Contract address not configured.</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   if (!isAdmin && contractOwner) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileCheck className="h-5 w-5" />
-            Admin KYC Management
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
-            <p className="text-muted-foreground">Access denied: Admin privileges required</p>
-            <p className="text-sm text-muted-foreground mt-2">Contract Owner: {contractOwner}</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="min-w-0 max-w-full space-y-6 overflow-x-hidden">
+        <h2 className="text-xl font-semibold tracking-tight">KYC Management</h2>
+        <Card className="border-border shadow-sm">
+          <CardContent className="pt-6">
+            <div className="py-8 text-center">
+              <WarningIcon className="mx-auto mb-2 h-8 w-8 text-destructive" weight="duotone" />
+              <p className="text-muted-foreground">Access denied: Admin privileges required.</p>
+              <p className="mt-2 text-sm text-muted-foreground">Contract Owner: {String(contractOwner)}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -546,64 +538,65 @@ export function AdminKYCManagement() {
   const isTransactionPending = isWritePending || isConfirming;
 
   return (
-    <div className="space-y-6 w-full">
+    <div className="min-w-0 max-w-full w-full space-y-6 overflow-x-hidden">
+      <h2 className="text-xl font-semibold tracking-tight">KYC Management</h2>
       {pendingAddressesState.length > 0 && contractAddress && <KYCRequestsLoader key={`${dataLoadKey}-${pendingAddressesState.join(',')}`} address={address} addresses={pendingAddressesState} contractAddress={contractAddress} onAllDataLoaded={handleAllDataLoaded} />}
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <Card className="min-w-0 border-border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <ClockIcon className="h-4 w-4 text-muted-foreground" weight="regular" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{isLoading ? <Skeleton className="h-8 w-16" /> : hasErrorPending ? 'Error' : pendingRequests.length}</div>
+            <div className="text-xl font-bold">{isLoading ? <Skeleton className="h-8 w-16 bg-muted" /> : hasErrorPending ? 'Error' : pendingRequests.length}</div>
             <p className="text-xs text-muted-foreground">Awaiting review</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="min-w-0 border-border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total KYC Users</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <UsersIcon className="h-4 w-4 text-muted-foreground" weight="regular" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{allKYCUsers ? allKYCUsers.length : <Skeleton className="h-8 w-16" />}</div>
+            <div className="text-xl font-bold">{allKYCUsers ? allKYCUsers.length : <Skeleton className="h-8 w-16 bg-muted" />}</div>
             <p className="text-xs text-muted-foreground">All time requests</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="min-w-0 border-border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Contract Owner</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+            <CheckCircleIcon className="h-4 w-4 text-muted-foreground" weight="regular" />
           </CardHeader>
           <CardContent>
-            <div className="text-sm font-mono">{contractOwner ? `${contractOwner.slice(0, 6)}...${contractOwner.slice(-4)}` : <Skeleton className="h-4 w-20" />}</div>
+            <div className="text-sm font-mono">{contractOwner ? `${String(contractOwner).slice(0, 6)}...${String(contractOwner).slice(-4)}` : <Skeleton className="h-4 w-20 bg-muted" />}</div>
             <p className="text-xs text-muted-foreground">Admin address</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="min-w-0 border-border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Your Access</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <UsersIcon className="h-4 w-4 text-muted-foreground" weight="regular" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{isAdmin ? <Badge className="bg-green-100 text-green-800 border-green-200">ADMIN</Badge> : <Badge variant="secondary">USER</Badge>}</div>
+            <div className="text-xl font-bold">{isAdmin ? <Badge className="border-border bg-primary/10 text-primary">ADMIN</Badge> : <Badge variant="secondary">USER</Badge>}</div>
             <p className="text-xs text-muted-foreground">Access level</p>
           </CardContent>
         </Card>
       </div>
 
       {isAdmin && (
-        <Card>
+        <Card className="min-w-0 border-border shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+              <FileTextIcon className="h-5 w-5" weight="regular" />
               Current Tier Limits
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
               {[1, 2, 3, 4].map((tier) => (
-                <div key={tier} className="p-3 border rounded-lg">
+                <div key={tier} className="rounded-lg border border-border p-3">
                   <div className="font-medium text-sm">{tier === 4 ? 'VIP' : `TIER ${tier}`}</div>
                   <div className="text-lg font-bold">{loadingTierLimits ? <Skeleton className="h-6 w-20" /> : `${parseFloat(tierLimits[tier] || '0').toLocaleString()} ${SYMBOL}`}</div>
                   <div className="text-xs text-muted-foreground">Daily limit</div>
@@ -614,23 +607,23 @@ export function AdminKYCManagement() {
         </Card>
       )}
 
-      <Card>
+      <Card className="min-w-0 border-border shadow-sm">
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <FileCheck className="h-5 w-5" />
+          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+              <FileTextIcon className="h-5 w-5" weight="regular" />
               KYC Requests ({filteredRequests.length})
             </CardTitle>
             <div className="flex items-center gap-2">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" weight="regular" />
                 <Input placeholder="Search by address..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 w-64" />
               </div>
               {/* <Button variant="outline" size="sm" onClick={refreshData} disabled={isLoading || isTransactionPending}>
                 <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
               </Button> */}
               <Button variant="outline" size="sm" onClick={handleBatchApprove} disabled={isLoading || isTransactionPending}>
-                <Users className="h-4 w-4 mr-2" />
+                <UsersIcon className="mr-2 h-4 w-4" weight="regular" />
                 Batch Approve
               </Button>
             </div>
@@ -639,7 +632,7 @@ export function AdminKYCManagement() {
         <CardContent>
           {hasErrorPending && (
             <Alert variant="destructive" className="mb-4">
-              <AlertCircle className="h-4 w-4" />
+              <WarningIcon className="h-4 w-4" weight="regular" />
               <AlertDescription>{renderErrorState()}</AlertDescription>
             </Alert>
           )}
@@ -664,29 +657,29 @@ export function AdminKYCManagement() {
               ))
             ) : filteredRequests.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                <FileCheck className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <FileTextIcon className="mx-auto mb-4 h-12 w-12 opacity-50" weight="duotone" />
                 <p>No pending KYC requests</p>
                 {hasErrorPending && <p className="text-sm mt-2">Unable to load requests from contract</p>}
               </div>
             ) : (
               filteredRequests.map((request) => (
-                <div key={request.address} className="border rounded-lg p-4 space-y-4">
+                <div key={request.address} className="rounded-lg border border-border bg-card p-4 space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <p className="font-medium font-mono text-sm">{request.address}</p>
-                        <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">PENDING</Badge>
+                        <Badge className="border-border bg-muted text-muted-foreground">PENDING</Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">Submitted: {formatDate(request.timestamp)}</p>
                     </div>
                     <Button variant="outline" size="sm" disabled={request.documentHash === 'Error loading data' || request.documentHash === 'No document hash provided'} onClick={() => handleViewDetails(request.documentHash)}>
-                      <Eye className="h-4 w-4 mr-2" />
+                      <EyeIcon className="mr-2 h-4 w-4" weight="regular" />
                       View Details
                     </Button>
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Document Hash (IPFS)</Label>
-                    <p className="text-sm bg-muted p-2 rounded font-mono">{request.documentHash === 'Error loading' ? <span className="text-red-500">Error loading document hash</span> : request.documentHash}</p>
+                    <p className="text-sm bg-muted p-2 rounded font-mono">{request.documentHash === 'Error loading' ? <span className="text-destructive">Error loading document hash</span> : request.documentHash}</p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -729,8 +722,8 @@ export function AdminKYCManagement() {
                   <div className="flex gap-2 pt-2">
                     <ConfirmationModal
                       trigger={
-                        <Button size="sm" className="bg-green-600 hover:bg-green-700" disabled={isTransactionPending || processingRequest === request.address || !selectedTier[request.address] || loadingTierLimits}>
-                          <CheckCircle className="h-4 w-4 mr-2" />
+                        <Button size="sm" disabled={isTransactionPending || processingRequest === request.address || !selectedTier[request.address] || loadingTierLimits}>
+                          <CheckCircleIcon className="mr-2 h-4 w-4" weight="regular" />
                           {processingRequest === request.address ? 'Approving...' : 'Approve'}
                         </Button>
                       }
@@ -738,12 +731,12 @@ export function AdminKYCManagement() {
                       description={`Are you sure you want to approve the KYC request for ${request.address}? They will be assigned ${getTierName(selectedTier[request.address])} status with corresponding daily limits.`}
                       confirmText="Approve KYC"
                       onConfirm={() => handleApprove(request.address)}
-                      icon={<CheckCircle className="h-5 w-5" />}
+                      icon={<CheckCircleIcon className="h-5 w-5" weight="regular" />}
                     />
                     <ConfirmationModal
                       trigger={
                         <Button size="sm" variant="destructive" disabled={isTransactionPending || processingRequest === request.address || !rejectionReasons[request.address]?.trim()}>
-                          <XCircle className="h-4 w-4 mr-2" />
+                          <XCircleIcon className="mr-2 h-4 w-4" weight="regular" />
                           {processingRequest === request.address ? 'Rejecting...' : 'Reject'}
                         </Button>
                       }
@@ -752,7 +745,7 @@ export function AdminKYCManagement() {
                       confirmText="Reject KYC"
                       onConfirm={() => handleReject(request.address)}
                       variant="destructive"
-                      icon={<XCircle className="h-5 w-5" />}
+                      icon={<XCircleIcon className="h-5 w-5" weight="regular" />}
                     />
                   </div>
                 </div>

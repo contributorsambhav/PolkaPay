@@ -8,8 +8,8 @@ import { useAuth } from "@/contexts/auth-context"
 export function useContract() {
   const { user } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState(null)
-  const handleContractCall = useCallback(async (operation, successMessage) => {
+  const [error, setError] = useState<string | null>(null)
+  const handleContractCall = useCallback(async (operation: () => Promise<unknown>, successMessage?: string) => {
     setIsLoading(true)
     setError(null)
     try {
@@ -18,8 +18,9 @@ export function useContract() {
         console.log(successMessage)
       }
       return result
-    } catch (err) {
-      const errorMessage = err?.reason || err?.message || "Transaction failed"
+    } catch (err: unknown) {
+      const errObj = err as { reason?: string; message?: string }
+      const errorMessage = errObj?.reason ?? errObj?.message ?? "Transaction failed"
       setError(errorMessage)
       console.error("Contract operation failed:", err)
       return null
@@ -28,25 +29,25 @@ export function useContract() {
     }
   }, [])
   const requestKYC = useCallback(
-    async (documentHash) => {
+    async (documentHash: string) => {
       return handleContractCall(() => remittanceContract.requestKYC(documentHash), "KYC request submitted successfully")
     },
     [handleContractCall],
   )
   const approveKYC = useCallback(
-    async (userAddress, tier) => {
+    async (userAddress: string, tier: number) => {
       return handleContractCall(() => remittanceContract.approveKYC(userAddress, tier), "KYC approved successfully")
     },
     [handleContractCall],
   )
   const rejectKYC = useCallback(
-    async (userAddress, reason) => {
+    async (userAddress: string, reason: string) => {
       return handleContractCall(() => remittanceContract.rejectKYC(userAddress, reason), "KYC rejected successfully")
     },
     [handleContractCall],
   )
   const sendRemittance = useCallback(
-    async (recipient, amount) => {
+    async (recipient: string, amount: string) => {
       return handleContractCall(
         () => remittanceContract.sendRemittance(recipient, amount),
         "Remittance sent successfully",
@@ -58,7 +59,7 @@ export function useContract() {
     return handleContractCall(() => remittanceContract.claimRemittance(), "Funds claimed successfully")
   }, [handleContractCall])
   const setUserTier = useCallback(
-    async (userAddress, tier) => {
+    async (userAddress: string, tier: number) => {
       return handleContractCall(
         () => remittanceContract.setUserTier(userAddress, tier),
         "User tier updated successfully",
@@ -67,7 +68,7 @@ export function useContract() {
     [handleContractCall],
   )
   const freezeUser = useCallback(
-    async (userAddress, frozen) => {
+    async (userAddress: string, frozen: boolean) => {
       return handleContractCall(
         () => remittanceContract.freezeRecipient(userAddress, frozen),
         `User ${frozen ? "frozen" : "unfrozen"} successfully`,
@@ -76,7 +77,7 @@ export function useContract() {
     [handleContractCall],
   )
   const setBlacklist = useCallback(
-    async (userAddress, status) => {
+    async (userAddress: string, status: boolean) => {
       return handleContractCall(
         () => remittanceContract.setBlacklist(userAddress, status),
         `User ${status ? "blacklisted" : "removed from blacklist"} successfully`,
@@ -85,19 +86,19 @@ export function useContract() {
     [handleContractCall],
   )
   const getUserInfo = useCallback(
-    async (userAddress) => {
-      return handleContractCall(() => remittanceContract.getUserInfo(userAddress))
+    async (userAddress: string) => {
+      return handleContractCall(() => remittanceContract.getUserInfo(userAddress), undefined)
     },
     [handleContractCall],
   )
   const getPendingKYC = useCallback(async () => {
-    return handleContractCall(() => remittanceContract.getPendingKYC())
+    return handleContractCall(() => remittanceContract.getPendingKYC(), undefined)
   }, [handleContractCall])
   const getMyBalance = useCallback(async () => {
-    return handleContractCall(() => remittanceContract.getMyBalance())
+    return handleContractCall(() => remittanceContract.getMyBalance(), undefined)
   }, [handleContractCall])
   const getMyRemainingLimit = useCallback(async () => {
-    return handleContractCall(() => remittanceContract.getMyRemainingLimit())
+    return handleContractCall(() => remittanceContract.getMyRemainingLimit(), undefined)
   }, [handleContractCall])
   return {
     isLoading,

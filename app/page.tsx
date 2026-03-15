@@ -16,8 +16,8 @@ import { useAuth } from '@/contexts/auth-context';
 export default function Page() {
   const { user } = useAuth();
 
-  const primaryPath = user?.role === 'admin' ? '/admin' : '/user';
-  const primaryLabel = user?.role === 'admin' ? 'Go to Admin Dashboard' : 'Go to User Dashboard';
+  const primaryPath = user?.mode === 'admin' ? '/admin' : '/user';
+  const primaryLabel = user?.mode === 'admin' ? 'Go to Admin Dashboard' : 'Go to User Dashboard';
 
   return (
     <div className="flex min-h-svh min-w-0 flex-col items-center justify-center bg-background px-4 py-12 sm:px-6 sm:py-16">

@@ -17,6 +17,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useDisconnect } from 'wagmi';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { LANDING_NAV_ITEMS } from '@/lib/nav-config';
+import { toast } from 'sonner';
 
 const LANDING_ICONS = {
   '/user': SquaresFourIcon,
@@ -34,19 +35,29 @@ function formatAddress(addr: string | undefined) {
 export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, logout, toggleMode } = useAuth();
   const { disconnect } = useDisconnect();
 
   if (!user) return null;
 
   const isAdmin = user.role === 'admin';
-  const items = isAdmin ? LANDING_NAV_ITEMS.admin : LANDING_NAV_ITEMS.user;
+  const isUserMode = user.mode === 'user';
+  const activeRole = isUserMode ? 'User' : 'Admin';
+  
+  const items = isAdmin && !isUserMode ? LANDING_NAV_ITEMS.admin : LANDING_NAV_ITEMS.user;
   const isDashboardArea =
     pathname.startsWith('/admin') ||
     pathname.startsWith('/user') ||
     pathname.startsWith('/analytics') ||
     pathname.startsWith('/contract') ||
     pathname.startsWith('/kyc');
+
+  const handleModeToggle = () => {
+    const nextMode = user.mode === 'admin' ? 'user' : 'admin';
+    toggleMode();
+    toast.success(`Switched to ${nextMode === 'admin' ? 'Admin' : 'User'} Mode`);
+    router.push(nextMode === 'admin' ? '/admin' : '/user');
+  };
 
   const handleLogout = async () => {
     try {
@@ -74,7 +85,7 @@ export function Navbar() {
                 RemitPay
               </span>
               <span className="text-sm font-semibold text-foreground leading-tight">
-                {isAdmin ? 'Admin Console' : 'User Console'}
+                {activeRole} Console
               </span>
             </div>
           </div>
@@ -107,12 +118,23 @@ export function Navbar() {
         )}
 
         <div className="flex shrink-0 items-center gap-3">
+          {isAdmin && (
+            <Button
+              onClick={handleModeToggle}
+              variant="outline"
+              size="sm"
+              className="hidden sm:flex h-8 gap-1.5 border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 hover:text-primary"
+            >
+              <SquaresFourIcon className="h-3.5 w-3.5" size={14} />
+              Switch to {isUserMode ? 'Admin' : 'User'} Mode
+            </Button>
+          )}
           <div className="hidden sm:flex flex-col items-end gap-0.5">
             <span className="font-mono text-xs text-foreground tabular-nums">
               {formatAddress(user.address)}
             </span>
             <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-              {isAdmin ? 'Admin' : 'User'}
+              {isAdmin ? `Admin (${activeRole} Mode)` : 'User'}
             </span>
           </div>
           <Button

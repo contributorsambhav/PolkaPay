@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   ChartLineUpIcon,
+  CurrencyDollarIcon,
   SealCheckIcon,
   HouseIcon,
   GearIcon,
@@ -29,6 +30,7 @@ const ICON_MAP = {
   kyc: SealCheckIcon,
   users: UsersIcon,
   transactions: TrendUpIcon,
+  stablecoins: CurrencyDollarIcon,
   settings: GearIcon,
 } as Record<string, React.ComponentType<{ className?: string; size?: number }>>;
 

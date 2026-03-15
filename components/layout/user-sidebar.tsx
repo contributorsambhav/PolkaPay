@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   ChartLineUpIcon,
   ChartBarIcon,
+  CurrencyDollarIcon,
   DownloadSimpleIcon,
   SealCheckIcon,
   HouseIcon,
@@ -29,6 +30,7 @@ const ICON_MAP = {
   overview: ChartLineUpIcon,
   send: PaperPlaneTiltIcon,
   receive: DownloadSimpleIcon,
+  stablecoins: CurrencyDollarIcon,
   kyc: SealCheckIcon,
   transactions: ChartBarIcon,
   profile: UserIcon,

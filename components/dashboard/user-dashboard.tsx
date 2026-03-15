@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { KYCTab, OverviewTab, ProfileTab, ReceiveTab, SendTab, TransactionsTab } from '@/components/tabs/user';
+import { KYCTab, OverviewTab, ProfileTab, ReceiveTab, SendTab, StablecoinsTab, TransactionsTab } from '@/components/tabs/user';
 import { useAuth } from '@/contexts/auth-context';
 import { USER_NAV_ITEMS, type UserSection } from '@/lib/nav-config';
 
@@ -25,6 +25,7 @@ export function UserDashboard({ initialTab = 'overview' }: { initialTab?: UserSe
     overview: <OverviewTab onTabChange={(tab) => handleTabChange(tab as UserSection)} />,
     send: <SendTab />,
     receive: <ReceiveTab />,
+    stablecoins: <StablecoinsTab />,
     kyc: <KYCTab />,
     transactions: <TransactionsTab />,
     profile: <ProfileTab />,

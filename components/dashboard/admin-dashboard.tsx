@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { AdminKYCManagement } from '@/components/kyc/admin-kyc-management';
 import { OverviewTab } from '@/components/tabs/admin/overview-tab';
 import { SettingsTab } from '@/components/tabs/admin/settings-tab';
+import { StablecoinManagementTab } from '@/components/tabs/admin/stablecoin-management-tab';
 import { TransactionAnalytics } from '@/components/analytics/transaction-analytics';
 import { UsersTab } from '@/components/tabs/admin/users-tab';
 import { useAuth } from '@/contexts/auth-context';
@@ -32,6 +33,7 @@ export function AdminDashboard({ initialTab = 'overview' }: { initialTab?: Admin
     kyc: <AdminKYCManagement />,
     users: <UsersTab />,
     transactions: <TransactionAnalytics />,
+    stablecoins: <StablecoinManagementTab />,
     settings: <SettingsTab />,
   };
 

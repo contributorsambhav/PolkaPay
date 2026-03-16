@@ -134,7 +134,7 @@ export function Navbar() {
               {formatAddress(user.address)}
             </span>
             <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-              {isAdmin ? `Admin (${activeRole} Mode)` : 'User'}
+              {isUserMode ? 'User' : isAdmin ? 'Admin' : 'User'}
             </span>
           </div>
           <Button

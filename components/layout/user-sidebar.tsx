@@ -5,13 +5,10 @@ import { usePathname } from 'next/navigation';
 import {
   ChartLineUpIcon,
   ChartBarIcon,
-  CurrencyDollarIcon,
-  DownloadSimpleIcon,
   SealCheckIcon,
   HouseIcon,
-  PaperPlaneTiltIcon,
   UserIcon,
-  WalletIcon,
+  SwapIcon,
 } from '@phosphor-icons/react';
 
 import {
@@ -28,14 +25,10 @@ import { useSidebar } from '@/components/ui/sidebar';
 
 const ICON_MAP = {
   overview: ChartLineUpIcon,
-  send: PaperPlaneTiltIcon,
-  receive: DownloadSimpleIcon,
-  stablecoins: CurrencyDollarIcon,
+  transfer: SwapIcon,
   kyc: SealCheckIcon,
   transactions: ChartBarIcon,
   profile: UserIcon,
-  analytics: ChartBarIcon,
-  remittance: WalletIcon,
 } as Record<string, React.ComponentType<{ className?: string; size?: number }>>;
 
 export function UserSidebar() {

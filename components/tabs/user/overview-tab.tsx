@@ -423,11 +423,11 @@ export function OverviewTab({ onTabChange }: OverviewTabProps) {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button className="h-20 flex-col gap-2" onClick={() => onTabChange('send')} disabled={!isAccountReady}>
+            <Button className="h-20 flex-col gap-2" onClick={() => onTabChange('transfer')} disabled={!isAccountReady}>
               <Send className="h-6 w-6" />
               Send Money
             </Button>
-            <Button variant="outline" className="h-20 flex-col gap-2 bg-transparent" onClick={() => onTabChange('receive')} disabled={!isAccountReady}>
+            <Button variant="outline" className="h-20 flex-col gap-2 bg-transparent" onClick={() => onTabChange('transfer')} disabled={!isAccountReady}>
               <Download className="h-6 w-6" />
               Claim Funds
             </Button>

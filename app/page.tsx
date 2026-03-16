@@ -28,7 +28,7 @@ export default function Page() {
             KYC-enabled remittance on Polkadot
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl md:text-4xl">
-            RemitPay Operational Console
+            PolkaPay Operational Console
           </h1>
           <p className="mx-auto max-w-lg text-sm leading-relaxed text-muted-foreground">
             Manage remittances, perform KYC, monitor analytics, and operate the smart contract from

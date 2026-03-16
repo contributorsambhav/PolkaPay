@@ -369,17 +369,22 @@ export function TransactionAnalytics() {
         </Button>
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="min-w-0 border-border shadow-sm border-l-4 border-l-primary">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Native Volume (24h)</CardTitle>
-            <CurrencyCircleDollarIcon className="h-4 w-4 text-primary" weight="duotone" />
+        <Card className="min-w-0 border-border shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
+            <div className="space-y-0.5">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Native Volume</p>
+              <CardTitle className="text-sm font-semibold text-foreground">Last 24 hours</CardTitle>
+            </div>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <CurrencyCircleDollarIcon className="h-4 w-4" weight="duotone" />
+            </div>
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <Skeleton className="h-8 w-24 bg-muted" />
             ) : (
               <>
-                <div className="text-xl font-semibold">
+                <div className="text-2xl font-semibold">
                   {stats.totalVolume24h} {SYMBOL}
                 </div>
                 <p className="text-xs text-muted-foreground">Network native token</p>
@@ -388,61 +393,78 @@ export function TransactionAnalytics() {
           </CardContent>
         </Card>
 
-        <Card className="min-w-0 border-border shadow-sm border-l-4 border-l-green-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Stablecoin Activity (24h)</CardTitle>
-            <Coins className="h-4 w-4 text-green-500" />
+        <Card className="min-w-0 border-border shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
+            <div className="space-y-0.5">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Stablecoins</p>
+              <CardTitle className="text-sm font-semibold text-foreground">Activity (24h)</CardTitle>
+            </div>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+              <Coins className="h-4 w-4" />
+            </div>
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <Skeleton className="h-8 w-24 bg-muted" />
+              <Skeleton className="h-8 w-28 bg-muted" />
             ) : (
-              <>
-                <div className="text-sm space-y-1">
-                  {Object.values(stablecoinStats).length === 0 ? (
-                    <span className="text-muted-foreground italic">No activity</span>
-                  ) : (
-                    Object.values(stablecoinStats).map(s => (
-                      <div key={s.symbol} className="flex justify-between items-center">
-                        <span className="font-semibold text-lg">{s.volume} {s.symbol}</span>
-                        <Badge variant="secondary" className="text-[10px] px-1 h-4">{s.count} txs</Badge>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </>
+              <div className="space-y-1 text-sm">
+                {Object.values(stablecoinStats).length === 0 ? (
+                  <span className="italic text-muted-foreground">No activity</span>
+                ) : (
+                  Object.values(stablecoinStats).map((s) => (
+                    <div key={s.symbol} className="flex items-center justify-between gap-2">
+                      <span className="truncate text-sm font-semibold">
+                        {s.volume} {s.symbol}
+                      </span>
+                      <Badge variant="secondary" className="h-4 px-1 text-[10px]">
+                        {s.count} txs
+                      </Badge>
+                    </div>
+                  ))
+                )}
+              </div>
             )}
           </CardContent>
         </Card>
 
         <Card className="min-w-0 border-border shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Transactions (24h)</CardTitle>
-            <TrendUpIcon className="h-4 w-4 text-muted-foreground" weight="regular" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
+            <div className="space-y-0.5">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Transactions</p>
+              <CardTitle className="text-sm font-semibold text-foreground">Last 24 hours</CardTitle>
+            </div>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground">
+              <TrendUpIcon className="h-4 w-4" weight="regular" />
+            </div>
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <Skeleton className="h-8 w-16 bg-muted" />
             ) : (
               <>
-                <div className="text-xl font-semibold">{stats.totalTransactions24h}</div>
-                <p className="text-xs text-muted-foreground">Native + Stablecoins</p>
+                <div className="text-2xl font-semibold">{stats.totalTransactions24h}</div>
+                <p className="text-xs text-muted-foreground">Native + stablecoins</p>
               </>
             )}
           </CardContent>
         </Card>
 
         <Card className="min-w-0 border-border shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Native Avg Size</CardTitle>
-            <CurrencyCircleDollarIcon className="h-4 w-4 text-muted-foreground" weight="regular" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
+            <div className="space-y-0.5">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Average Size</p>
+              <CardTitle className="text-sm font-semibold text-foreground">Native (24h)</CardTitle>
+            </div>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground">
+              <CurrencyCircleDollarIcon className="h-4 w-4" weight="regular" />
+            </div>
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <Skeleton className="h-8 w-20 bg-muted" />
             ) : (
               <>
-                <div className="text-xl font-semibold">
+                <div className="text-2xl font-semibold">
                   {stats.avgTransactionSize} {SYMBOL}
                 </div>
                 <p className="text-xs text-muted-foreground">Native token average</p>

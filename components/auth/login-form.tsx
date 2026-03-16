@@ -202,7 +202,7 @@ export function LoginForm() {
           </div>
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-              RemitPay Dashboard
+              PolkaPay Dashboard
             </h1>
             <p className="text-sm text-muted-foreground">
               Secure KYC-enabled financial platform for global remittances

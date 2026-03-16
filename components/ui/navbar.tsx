@@ -82,7 +82,7 @@ export function Navbar() {
           <div className="flex items-center gap-3 shrink-0">
             <div className="flex flex-col">
               <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground leading-tight">
-                RemitPay
+                PolkaPay
               </span>
               <span className="text-sm font-semibold text-foreground leading-tight">
                 {activeRole} Console

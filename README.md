@@ -1,8 +1,8 @@
-# RemitPay 💸
+# PolkaPay 💸
 
-A secure, blockchain-based remittance platform with KYC verification, built on Polkadot Hub Testnet. RemitPay enables fast, transparent cross-border money transfers with tiered verification levels and automated compliance.
+A secure, blockchain-based remittance platform with KYC verification, built on Polkadot Hub Testnet. PolkaPay enables fast, transparent cross-border money transfers with tiered verification levels and automated compliance.
 
-![Next.js](https://img.shields.io/badge/Next.js-14.2-black?logo=next.js)
+![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
 ![Solidity](https://img.shields.io/badge/Solidity-0.8.24-blue?logo=solidity)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)
 ![Wagmi](https://img.shields.io/badge/Wagmi-2.16-purple)
@@ -40,48 +40,87 @@ A secure, blockchain-based remittance platform with KYC verification, built on P
 - **Network**: Polkadot Hub Testnet (Paseo)
 
 ### Frontend
-- **Framework**: Next.js 14.2 (App Router)
+- **Framework**: Next.js 16 (App Router, Metadata API, file-based OG/Twitter images)
 - **Language**: TypeScript 5.x
 - **Blockchain Integration**: Wagmi 2.16, Viem 2.37, Ethers 6.4
-- **State Management**: TanStack Query 5.87
-- **Styling**: Tailwind CSS 4.1
+- **State Management**: TanStack Query 5.x
+- **Styling**: Tailwind CSS 4.x
 - **UI Components**: Radix UI + shadcn/ui
+- **SEO**: Centralized Metadata, JSON-LD structured data, dynamic Open Graph & Twitter images
 - **Forms**: React Hook Form + Zod
 - **Storage**: IPFS via Pinata
 
 ## 📁 Project Structure
 
 ```
-RemitPay/
+PolkaPay/
 ├── contracts/
-│   └── Remittance.sol          # Main smart contract with KYC & Limit libraries
+│   └── Remittance.sol              # Main smart contract with KYC & limit libraries
 ├── app/
-│   ├── layout.tsx              # Root layout with providers
-│   ├── page.tsx                # Main entry (login/dashboard router)
-│   ├── globals.css             # Global styles
+│   ├── layout.tsx                  # Root layout (providers, global metadata, JSON-LD)
+│   ├── page.tsx                    # Landing / Operational Console
+│   ├── globals.css                 # Global styles & color theme
+│   ├── opengraph-image.tsx         # Default OG image generator
+│   ├── twitter-image.tsx           # Default Twitter image (reuses OG)
+│   ├── admin/
+│   │   ├── layout.tsx              # Admin layout (AdminLayoutGuard)
+│   │   ├── page.tsx                # Admin console overview
+│   │   └── [section]/page.tsx      # overview | kyc | users | transactions | settings
+│   │   ├── opengraph-image.tsx     # Admin OG image
+│   │   └── twitter-image.tsx       # Admin Twitter image
+│   ├── user/
+│   │   ├── layout.tsx              # User layout (UserLayoutGuard)
+│   │   ├── page.tsx                # User console overview
+│   │   └── [section]/page.tsx      # overview | send | receive | kyc | transactions | profile
+│   │   ├── opengraph-image.tsx     # User OG image
+│   │   └── twitter-image.tsx       # User Twitter image
+│   ├── (dashboard)/
+│   │   ├── layout.tsx              # Shared dashboard shell for standalone pages
+│   │   ├── analytics/page.tsx      # Standalone analytics
+│   │   ├── contract/page.tsx       # Standalone send / claim
+│   │   └── kyc/page.tsx            # Standalone KYC status + form
 │   └── api/
 │       └── kyc/
-│           ├── submit/         # IPFS upload endpoint
-│           └── get-request/    # Document retrieval endpoint
+│           ├── submit/route.ts     # IPFS upload endpoint
+│           ├── get-request/route.ts# Document retrieval endpoint
+│           └── auto-approve/route.ts# Optional auto-approve helper
 ├── components/
-│   ├── dashboard/              # User & Admin dashboards
-│   ├── kyc/                    # KYC submission & management
-│   ├── contract/               # Send & Claim forms
-│   ├── tabs/                   # Dashboard tab components
-│   ├── analytics/              # Transaction analytics
-│   └── ui/                     # shadcn/ui components (40+)
+│   ├── layout/                     # Sidebars & dashboard shell
+│   │   ├── admin-sidebar.tsx
+│   │   ├── user-sidebar.tsx
+│   │   ├── admin-layout-guard.tsx  # RequireAuth + RequireAdmin + AdminSidebar + Navbar
+│   │   ├── user-layout-guard.tsx   # RequireAuth + UserSidebar + Navbar
+│   │   └── dashboard-shell.tsx
+│   ├── auth/                       # Login & auth guards
+│   │   ├── login-form.tsx
+│   │   ├── require-auth.tsx
+│   │   ├── require-admin.tsx
+│   │   ├── loading-screen.tsx
+│   │   └── network-guard.tsx
+│   ├── dashboard/
+│   │   ├── admin-dashboard.tsx     # Admin tab content router
+│   │   └── user-dashboard.tsx      # User tab content router
+│   ├── kyc/                        # KYC submission & management
+│   ├── contract/                   # Send & Claim forms
+│   ├── tabs/                       # Admin & user tab components
+│   ├── analytics/                  # Transaction analytics & widgets
+│   └── ui/                         # shadcn/ui components + Navbar, StatCard, PageContainer, etc.
 ├── contexts/
-│   └── auth-context.tsx        # Authentication & role management
+│   └── auth-context.tsx            # Authentication & role management
 ├── hooks/
-│   └── use-contract.ts         # Contract interaction hooks
+│   └── use-contract.ts             # Contract interaction helper
 ├── lib/
-│   ├── contract.ts             # Contract wrapper class
-│   ├── wagmi.ts                # Wagmi configuration
-│   └── utils.ts                # Utility functions
+│   ├── constants.ts                # Chain ID, contract address helpers
+│   ├── nav-config.ts               # Central nav definitions for admin/user
+│   ├── contract.ts                 # Contract wrapper class
+│   ├── wagmi.ts                    # Wagmi configuration
+│   ├── utils.ts                    # Misc utilities
+│   ├── metadata.ts                 # Centralized Metadata + JSON-LD definitions
+│   └── og-generator.tsx            # Reusable Open Graph / Twitter image generator
 ├── scripts/
-│   └── deploy.js               # Contract deployment script
-├── hardhat.config.cjs          # Hardhat configuration
-├── next.config.mjs             # Next.js configuration
+│   └── deploy.js                   # Contract deployment script
+├── hardhat.config.cjs              # Hardhat configuration
+├── next.config.mjs                 # Next.js configuration (incl. optimizePackageImports)
 └── package.json
 ```
 
@@ -98,8 +137,8 @@ RemitPay/
 
 ```bash
 # Clone the repository
-git clone https://github.com/contributorsambhav/RemitPay.git
-cd RemitPay
+git clone https://github.com/contributorsambhav/PolkaPay.git
+cd PolkaPay
 
 # Install dependencies
 pnpm install

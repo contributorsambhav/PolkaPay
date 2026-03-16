@@ -33,10 +33,35 @@ export function LoginForm() {
     setupEthereumListeners();
   }, []);
 
+  const isMobileDevice = () => {
+    if (typeof window === 'undefined') return false;
+    return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  };
+
+  const openInMetaMask = () => {
+    if (typeof window === 'undefined') return;
+    const { host, pathname, search, hash, protocol } = window.location;
+    // Prefer https for dapp deep links.
+    const dappUrl = `${protocol === 'http:' ? 'https:' : protocol}//${host}${pathname}${search}${hash}`;
+    const deepLink = `https://metamask.app.link/dapp/${dappUrl.replace(/^https?:\/\//, '')}`;
+    window.location.href = deepLink;
+  };
+
   const checkMetaMaskInstallation = () => {
-    if (typeof window !== 'undefined' && (window as any).ethereum) {
+    if (typeof window === 'undefined') return;
+
+    const hasProvider = Boolean((window as any).ethereum);
+    if (hasProvider) {
       setIsMetaMaskInstalled(true);
+      return;
     }
+
+    // On some mobile environments, injection can happen after initial load.
+    const onInitialized = () => {
+      if ((window as any).ethereum) setIsMetaMaskInstalled(true);
+    };
+    window.addEventListener('ethereum#initialized', onInitialized, { once: true } as any);
+    setTimeout(onInitialized, 1200);
   };
 
   const setupEthereumListeners = () => {
@@ -81,10 +106,13 @@ export function LoginForm() {
 
   const handleConnect = async () => {
     if (!(window as any).ethereum) {
+      if (isMobileDevice()) {
+        setConnectionError('Open this site inside the MetaMask app to connect your wallet.');
+        setTimeout(() => openInMetaMask(), 400);
+        return;
+      }
       setConnectionError('MetaMask is not installed');
-      setTimeout(() => {
-        window.open('https://metamask.io/download/', '_blank');
-      }, 1000);
+      setTimeout(() => window.open('https://metamask.io/download/', '_blank'), 600);
       return;
     }
 
@@ -218,14 +246,19 @@ export function LoginForm() {
               <div className="space-y-2">
                 <p className="font-medium">MetaMask required</p>
                 <p className="text-sm text-muted-foreground">
-                  Install MetaMask to connect your wallet and continue.
+                  {isMobileDevice()
+                    ? 'Open this site inside the MetaMask app to connect your wallet.'
+                    : 'Install MetaMask to connect your wallet and continue.'}
                 </p>
-                <Button
-                  onClick={() => window.open('https://metamask.io/download/', '_blank')}
-                  className="mt-2 w-full"
-                >
-                  Install MetaMask
-                </Button>
+                {isMobileDevice() ? (
+                  <Button onClick={openInMetaMask} className="mt-2 w-full">
+                    Open in MetaMask
+                  </Button>
+                ) : (
+                  <Button onClick={() => window.open('https://metamask.io/download/', '_blank')} className="mt-2 w-full">
+                    Install MetaMask
+                  </Button>
+                )}
               </div>
             </AlertDescription>
           </Alert>
@@ -301,7 +334,7 @@ export function LoginForm() {
             {!isConnected ? (
               <Button
                 onClick={handleConnect}
-                disabled={isProcessing || !isMetaMaskInstalled}
+                disabled={isProcessing}
                 className="w-full"
                 size="lg"
               >

@@ -12,6 +12,13 @@ export const REMITTANCE_ABI = [
   "function pause() external",
   "function unpause() external",
   "function freezeRecipient(address user, bool frozen) external",
+  "function eraseMyKYCData() external",
+  "function adminEraseKYCData(address user) external",
+  "function reportSecurityBreach(string calldata reason) external",
+  "function addSupportedStablecoin(address token, string calldata symbol) external",
+  "function removeSupportedStablecoin(address token) external",
+  "function sendStablecoinRemittance(address token, address recipient, uint256 amount) external",
+  "function claimStablecoinRemittance(address token) external",
   "function getBalance(address user) external view returns (uint256)",
   "function isWhitelisted(address user) external view returns (bool)",
   "function isBlacklisted(address user) external view returns (bool)",
@@ -19,7 +26,7 @@ export const REMITTANCE_ABI = [
   "function isKYCApproved(address user) external view returns (bool)",
   "function getPendingKYC() external view returns (address[])",
   "function getKYCStatus(address user) external view returns (uint8)",
-  "function getKYCRequest(address user) external view returns (string memory, uint256, uint8, string memory)",
+  "function getKYCRequest(address user) external view returns (string memory, uint256, uint8, string memory, bool, uint256, uint256)",
   "function getUserInfo(address user) external view returns (uint8, uint256, uint256, uint256, bool, bool, bool, uint8)",
   "function getRemainingLimit(address user) external view returns (uint256)",
   "function getTierLimit(uint8 tier) external view returns (uint256)",
@@ -31,6 +38,14 @@ export const REMITTANCE_ABI = [
   "function getMyWhitelistStatus() external view returns (bool)",
   "function getMyBlacklistStatus() external view returns (bool)",
   "function getMyFrozenStatus() external view returns (bool)",
+  "function getMyStablecoinBalance(address token) external view returns (uint256)",
+  "function getSupportedStablecoins() external view returns (address[])",
+  "function stablecoinSymbols(address) external view returns (string)",
+  "function supportedStablecoins(address) external view returns (bool)",
+  "function getStablecoinAccumulatedFees(address token) external view returns (uint256)",
+  "function withdrawStablecoinFees(address token) external",
+  "function isDataErased(address user) external view returns (bool)",
+  "function getDataRetentionEnd(address user) external view returns (uint256)",
   "event KYCRequested(address indexed user, string documentHash, uint256 timestamp)",
   "event KYCApproved(address indexed user, uint256 timestamp)",
   "event KYCRejected(address indexed user, string reason, uint256 timestamp)",
@@ -40,6 +55,13 @@ export const REMITTANCE_ABI = [
   "event TierUpdated(address indexed user, uint8 newTier)",
   "event UserWhitelisted(address indexed user, bool status)",
   "event UserBlacklisted(address indexed user, bool status)",
+  "event StablecoinAdded(address indexed token, string symbol)",
+  "event StablecoinRemoved(address indexed token)",
+  "event StablecoinSent(address indexed sender, address indexed recipient, address indexed token, uint256 amount, uint256 fee, uint256 txnId)",
+  "event StablecoinClaimed(address indexed recipient, address indexed token, uint256 amount)",
+  "event StablecoinFeeWithdrawn(address indexed token, uint256 amount)",
+  "event GDPRDataErasureRequested(address indexed user, uint256 timestamp)",
+  "event SecurityBreachSuspected(address indexed reporter, uint256 timestamp, string reason)",
 ]
 export const REMITTANCE_CONTRACT_ADDRESS =
   process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "0x1234567890123456789012345678901234567890"
@@ -140,12 +162,15 @@ export class RemittanceContract {
   }
   async getKYCRequest(userAddress: string) {
     if (!this.contract) throw new Error("Contract not initialized")
-    const [documentHash, timestamp, status, rejectionReason] = await this.contract.getKYCRequest(userAddress)
+    const [documentHash, timestamp, status, rejectionReason, consentGiven, consentTimestamp, dataRetentionEnd] = await this.contract.getKYCRequest(userAddress)
     return {
       documentHash,
       timestamp: Number(timestamp),
       status: Number(status),
       rejectionReason,
+      consentGiven,
+      consentTimestamp: Number(consentTimestamp),
+      dataRetentionEnd: Number(dataRetentionEnd),
     }
   }
   async getPendingKYC(): Promise<string[]> {

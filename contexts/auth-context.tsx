@@ -8,54 +8,81 @@ const ADMIN_ADDRESS = process.env.NEXT_PUBLIC_ADMIN_ADDRESS || '0x4E5E5586F554Ff
 interface User {
   address: string;
   role: 'admin' | 'user';
+  mode: 'admin' | 'user';
   isConnected: boolean;
 }
+
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   logout: () => void;
+  toggleMode: () => void;
 }
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentMode, setCurrentMode] = useState<'admin' | 'user' | null>(null);
   const { address: connectedAddress, isConnected } = useAccount();
+
+  useEffect(() => {
+    const savedMode = localStorage.getItem('remitpay_mode') as 'admin' | 'user' | null;
+    if (savedMode) {
+      setCurrentMode(savedMode);
+    }
+  }, []);
+
   const determineRole = (address: string): 'admin' | 'user' => {
     if (!address) return 'user';
     const lowerAddress = address.toLowerCase();
     const adminAddress = ADMIN_ADDRESS.toLowerCase();
-    console.log('Checking role for address:', lowerAddress);
-    console.log('Admin address:', adminAddress);
-    console.log('Is admin?', lowerAddress === adminAddress);
     return lowerAddress === adminAddress ? 'admin' : 'user';
   };
+
   useEffect(() => {
-    console.log('Auth context effect triggered');
-    console.log('isConnected:', isConnected);
-    console.log('connectedAddress:', connectedAddress);
     setIsLoading(true);
     if (isConnected && connectedAddress) {
       const role = determineRole(connectedAddress);
-      console.log('Setting user with role:', role);
+      
+      // Default mode to role if no mode set or if existing mode is admin but role is user
+      let mode: 'admin' | 'user' = role;
+      if (role === 'admin' && currentMode) {
+        mode = currentMode;
+      } else {
+        localStorage.removeItem('remitpay_mode');
+      }
+
       setUser({
         address: connectedAddress,
         role,
+        mode,
         isConnected: true
       });
     } else {
-      console.log('No connection, clearing user');
       setUser(null);
     }
     setIsLoading(false);
-  }, [isConnected, connectedAddress]);
-  const logout = () => {
-    console.log('Logging out');
-    setUser(null);
+  }, [isConnected, connectedAddress, currentMode]);
+
+  const toggleMode = () => {
+    if (user?.role !== 'admin') return;
+    const newMode = user.mode === 'admin' ? 'user' : 'admin';
+    setCurrentMode(newMode);
+    localStorage.setItem('remitpay_mode', newMode);
   };
+
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem('remitpay_mode');
+  };
+
   const value: AuthContextType = {
     user,
     isLoading,
-    logout
+    logout,
+    toggleMode
   };
   console.log('Auth context value:', value);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

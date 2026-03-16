@@ -43,9 +43,23 @@ interface ProcessedTransaction {
   address: string;
   date: string;
   timestamp: number;
+  token: string;
+  symbol: string;
+  decimals: number;
   txHash?: string;
 }
-const REMITTANCE_ABI = parseAbi(['function getMyTransactions() external view returns ((address,address,uint256,uint256,uint256,uint256)[] memory)', 'function getUserTransactionIds(address user) external view returns (uint256[] memory)', 'function getTransactionsByUser(address user) external view returns ((address,address,uint256,uint256,uint256,uint256)[] memory)', 'function getTotalTransactions() external view returns (uint256)', 'function getAllTransactions() external view returns ((address,address,uint256,uint256,uint256,uint256)[] memory)', 'function getMyBalance() external view returns (uint256)', 'function calculateTransactionFee(uint256 amount) external pure returns (uint256)', 'function getTransactionCost(uint256 amount) external pure returns (uint256 fee, uint256 total)', 'struct Transaction { address sender; address recipient; uint256 amount; uint256 fee; uint256 timestamp; uint256 txnId; }']);
+const REMITTANCE_ABI = parseAbi([
+  'function getMyTransactions() external view returns ((address sender, address recipient, uint256 amount, uint256 fee, uint256 timestamp, uint256 txnId, address token)[] memory)',
+  'function getUserTransactionIds(address user) external view returns (uint256[] memory)',
+  'function getTransactionsByUser(address user) external view returns ((address sender, address recipient, uint256 amount, uint256 fee, uint256 timestamp, uint256 txnId, address token)[] memory)',
+  'function getTotalTransactions() external view returns (uint256)',
+  'function getAllTransactions() external view returns ((address sender, address recipient, uint256 amount, uint256 fee, uint256 timestamp, uint256 txnId, address token)[] memory)',
+  'function getMyBalance() external view returns (uint256)',
+  'function calculateTransactionFee(uint256 amount) external pure returns (uint256)',
+  'function getTransactionCost(uint256 amount) external pure returns (uint256 fee, uint256 total)',
+  'function stablecoinSymbols(address token) external view returns (string)',
+  'struct Transaction { address sender; address recipient; uint256 amount; uint256 fee; uint256 timestamp; uint256 txnId; address token; }'
+]);
 export function TransactionsTab() {
   const { address, isConnected } = useAccount();
   const [contractAddress, setContractAddress] = useState<`0x${string}` | undefined>();
@@ -55,6 +69,9 @@ export function TransactionsTab() {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'sent' | 'received'>('all');
   const [dateFilter, setDateFilter] = useState<'all' | '7d' | '30d' | '90d'>('all');
+  const [tokenMetadata, setTokenMetadata] = useState<Record<string, { symbol: string; decimals: number }>>({
+    '0x0000000000000000000000000000000000000000': { symbol: SYMBOL || 'PAS', decimals: 18 }
+  });
   useEffect(() => {
     const addr = getContractAddress();
     setContractAddress(addr);
@@ -95,38 +112,72 @@ export function TransactionsTab() {
       setIsLoading(loadingTransactions);
       return;
     }
-    try {
-      console.log('📊 Processing transactions:', userTransactions);
-      const processed: ProcessedTransaction[] = userTransactions.map((tx: TransactionArray) => {
-        const sender = tx[0];
-        const recipient = tx[1];
-        const amount = tx[2];
-        const fee = tx[3];
-        const timestamp = tx[4];
-        const txnId = tx[5];
-        const isSent = sender.toLowerCase() === address.toLowerCase();
-        const otherParty = isSent ? recipient : sender;
-        const timestampMs = Number(timestamp) * 1000; // Convert to milliseconds
-        return {
-          id: txnId.toString(),
-          type: isSent ? ('sent' as const) : ('received' as const),
-          amount: formatEther(amount),
-          fee: formatEther(fee),
-          address: otherParty,
-          date: new Date(timestampMs).toLocaleDateString(),
-          timestamp: timestampMs
-        };
-      });
-      processed.sort((a, b) => b.timestamp - a.timestamp);
-      setTransactions(processed);
-      console.log('✅ Processed transactions:', processed);
-    } catch (error) {
-      console.error('❌ Error processing transactions:', error);
-      toast.error('Error processing transaction data');
-    } finally {
-      setIsLoading(loadingTransactions);
-    }
-  }, [userTransactions, address, loadingTransactions]);
+
+    const processTransactions = async () => {
+      try {
+        const rawTxs = userTransactions as any[];
+
+        // Discover tokens
+        const uniqueTokens = Array.from(new Set(rawTxs.map(t => t.token.toLowerCase())));
+        const newTokens = uniqueTokens.filter(t => !tokenMetadata[t]);
+        const updatedMetadata = { ...tokenMetadata };
+
+        if (newTokens.length > 0) {
+          const { createPublicClient, http, defineChain } = await import('viem');
+          const polkadotTestnet = defineChain({
+            id: CHAIN_ID,
+            name: 'Polkadot Hub Testnet',
+            nativeCurrency: { name: 'WND', symbol: 'WND', decimals: 18 },
+            rpcUrls: { default: { http: ['https://eth-rpc-testnet.polkadot.io/'] } },
+          });
+          const client = createPublicClient({ chain: polkadotTestnet, transport: http() });
+
+          for (const tokenAddr of newTokens) {
+            if (tokenAddr === '0x0000000000000000000000000000000000000000') continue;
+            try {
+              const [symbol, decimals] = await Promise.all([
+                client.readContract({ address: contractAddress!, abi: REMITTANCE_ABI, functionName: 'stablecoinSymbols', args: [tokenAddr as `0x${string}`] }) as Promise<string>,
+                client.readContract({ address: tokenAddr as `0x${string}`, abi: parseAbi(['function decimals() view returns (uint8)']), functionName: 'decimals' }).catch(() => 18) as Promise<number>
+              ]);
+              updatedMetadata[tokenAddr] = { symbol: symbol || 'TOKEN', decimals: Number(decimals) };
+            } catch (e) {
+              updatedMetadata[tokenAddr] = { symbol: 'TOKEN', decimals: 18 };
+            }
+          }
+          setTokenMetadata(updatedMetadata);
+        }
+
+        const { formatUnits } = await import('viem');
+        const processed: ProcessedTransaction[] = rawTxs.map((tx) => {
+          const isSent = tx.sender.toLowerCase() === address.toLowerCase();
+          const otherParty = isSent ? tx.recipient : tx.sender;
+          const timestampMs = Number(tx.timestamp) * 1000;
+          const meta = updatedMetadata[tx.token.toLowerCase()] || { symbol: 'TOKEN', decimals: 18 };
+
+          return {
+            id: tx.txnId.toString(),
+            type: isSent ? ('sent' as const) : ('received' as const),
+            amount: formatUnits(tx.amount, meta.decimals),
+            fee: formatUnits(tx.fee, meta.decimals),
+            address: otherParty,
+            date: new Date(timestampMs).toLocaleDateString(),
+            timestamp: timestampMs,
+            token: tx.token,
+            symbol: meta.symbol,
+            decimals: meta.decimals
+          };
+        });
+
+        processed.sort((a, b) => b.timestamp - a.timestamp);
+        setTransactions(processed);
+      } catch (error) {
+        console.error('❌ Error processing:', error);
+      } finally {
+        setIsLoading(loadingTransactions);
+      }
+    };
+    processTransactions();
+  }, [userTransactions, address, loadingTransactions, contractAddress]);
   useEffect(() => {
     let filtered = [...transactions];
     if (searchTerm) {
@@ -145,11 +196,11 @@ export function TransactionsTab() {
     setFilteredTransactions(filtered);
   }, [transactions, searchTerm, typeFilter, dateFilter]);
   const stats = {
-    totalSent: transactions.filter((tx) => tx.type === 'sent').reduce((sum, tx) => sum + parseFloat(tx.amount), 0),
-    totalReceived: transactions.filter((tx) => tx.type === 'received').reduce((sum, tx) => sum + parseFloat(tx.amount), 0),
-    totalFees: transactions.reduce((sum, tx) => sum + parseFloat(tx.fee), 0),
+    totalSentNative: transactions.filter((tx) => tx.type === 'sent' && tx.token === '0x0000000000000000000000000000000000000000').reduce((sum, tx) => sum + parseFloat(tx.amount), 0),
+    totalReceivedNative: transactions.filter((tx) => tx.type === 'received' && tx.token === '0x0000000000000000000000000000000000000000').reduce((sum, tx) => sum + parseFloat(tx.amount), 0),
+    totalFeesNative: transactions.filter((tx) => tx.token === '0x0000000000000000000000000000000000000000').reduce((sum, tx) => sum + parseFloat(tx.fee), 0),
     totalTransactions: transactions.length,
-    currentBalance: userBalance ? parseFloat(formatEther(userBalance)) : 0
+    currentBalanceNative: userBalance ? parseFloat(formatEther(userBalance)) : 0
   };
   const refreshData = async () => {
     setIsLoading(true);
@@ -222,7 +273,7 @@ export function TransactionsTab() {
               <Skeleton className="h-8 w-24 bg-muted" />
             ) : (
               <div className="text-xl font-semibold">
-                {stats.currentBalance.toFixed(4)} {SYMBOL}
+                {stats.currentBalanceNative.toFixed(4)} {SYMBOL}
               </div>
             )}
             <p className="text-xs text-muted-foreground">Available to claim</p>
@@ -238,10 +289,10 @@ export function TransactionsTab() {
               <Skeleton className="h-8 w-24 bg-muted" />
             ) : (
               <div className="text-xl font-semibold text-foreground">
-                {stats.totalSent.toFixed(4)} {SYMBOL}
+                {stats.totalSentNative.toFixed(4)} {SYMBOL}
               </div>
             )}
-            <p className="text-xs text-muted-foreground">Outgoing transfers</p>
+            <p className="text-xs text-muted-foreground">Outgoing native transfers</p>
           </CardContent>
         </Card>
         <Card className="min-w-0 border-border shadow-sm">
@@ -254,10 +305,10 @@ export function TransactionsTab() {
               <Skeleton className="h-8 w-24 bg-muted" />
             ) : (
               <div className="text-xl font-semibold text-foreground">
-                {stats.totalReceived.toFixed(4)} {SYMBOL}
+                {stats.totalReceivedNative.toFixed(4)} {SYMBOL}
               </div>
             )}
-            <p className="text-xs text-muted-foreground">Incoming transfers</p>
+            <p className="text-xs text-muted-foreground">Incoming native transfers</p>
           </CardContent>
         </Card>
         <Card className="min-w-0 border-border shadow-sm">
@@ -270,7 +321,7 @@ export function TransactionsTab() {
               <Skeleton className="h-8 w-24 bg-muted" />
             ) : (
               <div className="text-xl font-semibold">
-                {stats.totalFees.toFixed(6)} {SYMBOL}
+                {stats.totalFeesNative.toFixed(6)} {SYMBOL}
               </div>
             )}
             <p className="text-xs text-muted-foreground">Transaction fees paid</p>
@@ -392,7 +443,7 @@ export function TransactionsTab() {
                   <div className="text-right">
                     <p className={`text-lg font-bold ${tx.type === 'sent' ? 'text-destructive' : 'text-primary'}`}>
                       {tx.type === 'sent' ? '-' : '+'}
-                      {parseFloat(tx.amount).toFixed(4)} {SYMBOL}
+                      {parseFloat(tx.amount).toFixed(4)} {tx.symbol}
                     </p>
                   </div>
                 </div>

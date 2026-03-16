@@ -8,12 +8,13 @@ import {
   ArrowClockwiseIcon,
   MagnifyingGlassIcon,
   TrendUpIcon,
+  Coins,
 } from '@phosphor-icons/react';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { formatEther, parseAbi } from 'viem';
+import { formatEther, formatUnits, parseAbi } from 'viem';
 import { useAccount, useReadContract, useWatchContractEvent } from 'wagmi';
 import { useEffect, useState } from 'react';
 
@@ -31,6 +32,7 @@ interface Transaction {
   amount: bigint;
   fee: bigint;
   timestamp: bigint;
+  token: string;
   status: 'completed' | 'pending' | 'failed';
   hash?: string;
   blockNumber?: number;
@@ -41,7 +43,19 @@ interface TransactionStats {
   avgTransactionSize: string;
   successRate: number;
 }
-const REMITTANCE_ABI = parseAbi(['function getAllTransactions() external view returns ((address,address,uint256,uint256,uint256,uint256)[] memory)', 'function getTotalTransactions() external view returns (uint256)', 'function getContractBalance() external view returns (uint256)', 'function owner() external view returns (address)', 'function getTierLimit(uint8 tier) external view returns (uint256)', 'function getTransaction(uint256 txnId) external view returns (address,address,uint256,uint256,uint256)', 'event Sent(address indexed sender, address indexed recipient, uint256 amount)', 'event Claimed(address indexed recipient, uint256 amount)', 'event TransactionRecorded(uint256 indexed txnId, address indexed sender, address indexed recipient, uint256 amount, uint256 fee)', 'struct Transaction { address sender; address recipient; uint256 amount; uint256 fee; uint256 timestamp; uint256 txnId; }']);
+const REMITTANCE_ABI = parseAbi([
+  'function getAllTransactions() external view returns ((address sender, address recipient, uint256 amount, uint256 fee, uint256 timestamp, uint256 txnId, address token)[] memory)',
+  'function getTotalTransactions() external view returns (uint256)',
+  'function getContractBalance() external view returns (uint256)',
+  'function owner() external view returns (address)',
+  'function getTierLimit(uint8 tier) external view returns (uint256)',
+  'function getTransaction(uint256 txnId) external view returns (address,address,uint256,uint256,uint256,uint256,address)',
+  'function stablecoinSymbols(address token) external view returns (string)',
+  'event Sent(address indexed sender, address indexed recipient, uint256 amount)',
+  'event Claimed(address indexed recipient, uint256 amount)',
+  'event TransactionRecorded(uint256 indexed txnId, address indexed sender, address indexed recipient, uint256 amount, uint256 fee)',
+  'struct Transaction { address sender; address recipient; uint256 amount; uint256 fee; uint256 timestamp; uint256 txnId; address token; }',
+]);
 const SYMBOL = process.env.NEXT_PUBLIC_SYMBOL;
 
 export function TransactionAnalytics() {
@@ -59,6 +73,10 @@ export function TransactionAnalytics() {
   const [volumeData, setVolumeData] = useState<any[]>([]);
   const [statusDistribution, setStatusDistribution] = useState<any[]>([]);
   const [tierAnalytics, setTierAnalytics] = useState<any[]>([]);
+  const [tokenMetadata, setTokenMetadata] = useState<Record<string, { symbol: string; decimals: number }>>({
+    '0x0000000000000000000000000000000000000000': { symbol: SYMBOL || 'PAS', decimals: 18 }
+  });
+  const [stablecoinStats, setStablecoinStats] = useState<Record<string, { volume: string; count: number; symbol: string }>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [contractAddress, setContractAddress] = useState<`0x${string}` | undefined>();
   useEffect(() => {
@@ -123,62 +141,160 @@ export function TransactionAnalytics() {
       toast.success('New transaction detected');
     }
   });
+  // Effect to discover tokens when transactions change
+  useEffect(() => {
+    if (!transactions.length || !contractAddress) return;
+
+    const discoverTokens = async () => {
+      const uniqueTokens = Array.from(new Set(transactions.map(t => t.token.toLowerCase())));
+      const newTokens = uniqueTokens.filter(t => !tokenMetadata[t]);
+
+      if (newTokens.length === 0) return;
+
+      try {
+        const { createPublicClient, http, defineChain } = await import('viem');
+        const polkadotTestnet = defineChain({
+          id: CHAIN_ID,
+          name: 'Polkadot Hub Testnet',
+          nativeCurrency: { name: 'WND', symbol: 'WND', decimals: 18 },
+          rpcUrls: { default: { http: ['https://eth-rpc-testnet.polkadot.io/'] } },
+        });
+        const client = createPublicClient({ chain: polkadotTestnet, transport: http() });
+        const updatedMetadata = { ...tokenMetadata };
+
+        await Promise.all(newTokens.map(async (tokenAddr) => {
+          if (tokenAddr === '0x0000000000000000000000000000000000000000') return;
+          try {
+            const [symbol, decimals] = await Promise.all([
+              client.readContract({
+                address: contractAddress,
+                abi: REMITTANCE_ABI,
+                functionName: 'stablecoinSymbols',
+                args: [tokenAddr as `0x${string}`]
+              }) as Promise<string>,
+              client.readContract({
+                address: tokenAddr as `0x${string}`,
+                abi: parseAbi(['function decimals() view returns (uint8)']),
+                functionName: 'decimals'
+              }).catch(() => 18) as Promise<number>
+            ]);
+            updatedMetadata[tokenAddr] = { symbol: symbol || 'TOKEN', decimals: Number(decimals) };
+          } catch (e) {
+            console.error(`Failed to fetch metadata for ${tokenAddr}:`, e);
+            updatedMetadata[tokenAddr] = { symbol: 'TOKEN', decimals: 18 };
+          }
+        }));
+        setTokenMetadata(updatedMetadata);
+      } catch (e) {
+        console.error('Discovery error:', e);
+      }
+    };
+
+    discoverTokens();
+  }, [transactions, contractAddress, tokenMetadata]);
+
+  // Effect to update stats and charts when transactions OR metadata change
+  useEffect(() => {
+    if (!transactions.length) {
+      if (!loadingTransactions) setIsLoading(false);
+      return;
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    const oneDayAgo = now - 86400;
+    const last24hTxs = transactions.filter((tx) => Number(tx.timestamp) > oneDayAgo);
+
+    // Total Volume (Native)
+    const nativeTxs = last24hTxs.filter(tx => tx.token === '0x0000000000000000000000000000000000000000');
+    const totalNativeVolume = nativeTxs.reduce((sum, tx) => sum + Number(formatEther(tx.amount)), 0);
+    const avgNativeSize = nativeTxs.length > 0 ? totalNativeVolume / nativeTxs.length : 0;
+
+    // Stablecoin Stats
+    const scTxs = last24hTxs.filter(tx => tx.token !== '0x0000000000000000000000000000000000000000');
+    const scGrouped: Record<string, { volume: number; count: number; symbol: string }> = {};
+
+    scTxs.forEach(tx => {
+      const tokenAddr = tx.token.toLowerCase();
+      const meta = tokenMetadata[tokenAddr] || { symbol: 'TOKEN', decimals: 18 };
+      if (!scGrouped[tokenAddr]) {
+        scGrouped[tokenAddr] = { volume: 0, count: 0, symbol: meta.symbol };
+      }
+      scGrouped[tokenAddr].volume += Number(formatUnits(tx.amount, meta.decimals));
+      scGrouped[tokenAddr].count += 1;
+    });
+
+    const finalScStats: Record<string, { volume: string; count: number; symbol: string }> = {};
+    Object.entries(scGrouped).forEach(([addr, data]) => {
+      finalScStats[addr] = { ...data, volume: data.volume.toFixed(2) };
+    });
+    setStablecoinStats(finalScStats);
+
+    setStats({
+      totalVolume24h: totalNativeVolume.toFixed(2),
+      totalTransactions24h: last24hTxs.length,
+      avgTransactionSize: avgNativeSize.toFixed(2),
+      successRate: 99.9
+    });
+
+    const chartData = [];
+    for (let i = 6; i >= 0; i--) {
+      const dayStart = now - i * 86400;
+      const dayEnd = now - (i - 1) * 86400;
+      const dayTxs = transactions.filter((tx) => {
+        const txTime = Number(tx.timestamp);
+        return txTime >= dayStart && txTime < dayEnd;
+      });
+      const dayNativeVolume = dayTxs.filter(tx => tx.token === '0x0000000000000000000000000000000000000000')
+        .reduce((sum, tx) => sum + Number(formatEther(tx.amount)), 0);
+
+      // For stablecoins, we'll just count transactions for the chart or "pseudo-volume" (assuming USD parity for simple visualization)
+      const dayScVolume = dayTxs.filter(tx => tx.token !== '0x0000000000000000000000000000000000000000')
+        .reduce((sum, tx) => {
+          const meta = tokenMetadata[tx.token.toLowerCase()] || { decimals: 18 };
+          return sum + Number(formatUnits(tx.amount, meta.decimals));
+        }, 0);
+
+      chartData.push({
+        date: new Date(dayStart * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        nativeVolume: Math.round(dayNativeVolume),
+        scVolume: Math.round(dayScVolume),
+        transactions: dayTxs.length
+      });
+    }
+    setVolumeData(chartData);
+
+    setStatusDistribution([
+      { name: 'Completed', value: transactions.length, color: 'oklch(0.42 0.09 265)' },
+      { name: 'Pending', value: 0, color: 'oklch(0.72 0.16 75)' },
+      { name: 'Failed', value: 0, color: 'oklch(0.55 0.22 25)' }
+    ]);
+
+    setTierAnalytics([
+      { tier: 'VIP', volume: Math.round(totalNativeVolume * 0.4), count: Math.round(last24hTxs.length * 0.1), avgAmount: Math.round(avgNativeSize * 4) },
+      { tier: 'TIER3', volume: Math.round(totalNativeVolume * 0.3), count: Math.round(last24hTxs.length * 0.2), avgAmount: Math.round(avgNativeSize * 2) },
+      { tier: 'TIER2', volume: Math.round(totalNativeVolume * 0.2), count: Math.round(last24hTxs.length * 0.3), avgAmount: Math.round(avgNativeSize * 1.2) },
+      { tier: 'TIER1', volume: Math.round(totalNativeVolume * 0.1), count: Math.round(last24hTxs.length * 0.4), avgAmount: Math.round(avgNativeSize * 0.4) }
+    ]);
+    setIsLoading(false);
+  }, [transactions, tokenMetadata, loadingTransactions]);
+
+  // Effect to process raw transactions into state
   useEffect(() => {
     if (!allTransactions || !Array.isArray(allTransactions)) {
       setIsLoading(loadingTransactions || loadingTotal);
       return;
     }
-    console.log('Processing transactions:', allTransactions);
-    const processedTransactions: Transaction[] = allTransactions.map((tx, index) => ({
-      txnId: index + 1, // Contract returns array, so we use index + 1 as ID
-      sender: tx[0] as string,
-      recipient: tx[1] as string,
-      amount: tx[2] as bigint,
-      fee: tx[3] as bigint,
-      timestamp: tx[4] as bigint,
-      status: 'completed' as const // All recorded transactions are completed
+    const processed: Transaction[] = allTransactions.map((tx) => ({
+      txnId: Number(tx.txnId),
+      sender: tx.sender,
+      recipient: tx.recipient,
+      amount: tx.amount,
+      fee: tx.fee,
+      timestamp: tx.timestamp,
+      token: tx.token,
+      status: 'completed' as const
     }));
-    setTransactions(processedTransactions);
-    const now = Math.floor(Date.now() / 1000);
-    const oneDayAgo = now - 86400; // 24 hours in seconds
-    const last24hTxs = processedTransactions.filter((tx) => Number(tx.timestamp) > oneDayAgo);
-    const totalVolume = last24hTxs.reduce((sum, tx) => sum + Number(formatEther(tx.amount)), 0);
-    const avgSize = last24hTxs.length > 0 ? totalVolume / last24hTxs.length : 0;
-    setStats({
-      totalVolume24h: totalVolume.toFixed(2),
-      totalTransactions24h: last24hTxs.length,
-      avgTransactionSize: avgSize.toFixed(2),
-      successRate: 98.9 // Assuming high success rate for completed transactions
-    });
-    const chartData = [];
-    for (let i = 6; i >= 0; i--) {
-      const dayStart = now - i * 86400;
-      const dayEnd = now - (i - 1) * 86400;
-      const dayTxs = processedTransactions.filter((tx) => {
-        const txTime = Number(tx.timestamp);
-        return txTime >= dayStart && txTime < dayEnd;
-      });
-      const dayVolume = dayTxs.reduce((sum, tx) => sum + Number(formatEther(tx.amount)), 0);
-      chartData.push({
-        date: new Date(dayStart * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        volume: Math.round(dayVolume),
-        transactions: dayTxs.length
-      });
-    }
-    setVolumeData(chartData);
-    setStatusDistribution([
-      { name: 'Completed', value: processedTransactions.length, color: 'oklch(0.42 0.09 265)' },
-      { name: 'Pending', value: 0, color: 'oklch(0.72 0.16 75)' },
-      { name: 'Failed', value: 0, color: 'oklch(0.55 0.22 25)' }
-    ]);
-    const totalVolume24hNum = parseFloat(stats.totalVolume24h) || totalVolume;
-    setTierAnalytics([
-      { tier: 'VIP', volume: Math.round(totalVolume24hNum * 0.4), count: Math.round(last24hTxs.length * 0.1), avgAmount: Math.round(avgSize * 4) },
-      { tier: 'TIER3', volume: Math.round(totalVolume24hNum * 0.3), count: Math.round(last24hTxs.length * 0.2), avgAmount: Math.round(avgSize * 2) },
-      { tier: 'TIER2', volume: Math.round(totalVolume24hNum * 0.2), count: Math.round(last24hTxs.length * 0.3), avgAmount: Math.round(avgSize * 1.2) },
-      { tier: 'TIER1', volume: Math.round(totalVolume24hNum * 0.1), count: Math.round(last24hTxs.length * 0.4), avgAmount: Math.round(avgSize * 0.4) }
-    ]);
-    setIsLoading(false);
+    setTransactions(processed);
   }, [allTransactions, loadingTransactions, loadingTotal]);
   const filteredTransactions = transactions.filter((tx) => {
     const matchesSearch = tx.sender.toLowerCase().includes(searchTerm.toLowerCase()) || tx.recipient.toLowerCase().includes(searchTerm.toLowerCase()) || tx.txnId.toString().includes(searchTerm);
@@ -253,10 +369,10 @@ export function TransactionAnalytics() {
         </Button>
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="min-w-0 border-border shadow-sm">
+        <Card className="min-w-0 border-border shadow-sm border-l-4 border-l-primary">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Volume (24h)</CardTitle>
-            <CurrencyCircleDollarIcon className="h-4 w-4 text-muted-foreground" weight="regular" />
+            <CardTitle className="text-sm font-medium">Native Volume (24h)</CardTitle>
+            <CurrencyCircleDollarIcon className="h-4 w-4 text-primary" weight="duotone" />
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -266,14 +382,42 @@ export function TransactionAnalytics() {
                 <div className="text-xl font-semibold">
                   {stats.totalVolume24h} {SYMBOL}
                 </div>
-                <p className="text-xs text-muted-foreground">Live data</p>
+                <p className="text-xs text-muted-foreground">Network native token</p>
               </>
             )}
           </CardContent>
         </Card>
+
+        <Card className="min-w-0 border-border shadow-sm border-l-4 border-l-green-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Stablecoin Activity (24h)</CardTitle>
+            <Coins className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="h-8 w-24 bg-muted" />
+            ) : (
+              <>
+                <div className="text-sm space-y-1">
+                  {Object.values(stablecoinStats).length === 0 ? (
+                    <span className="text-muted-foreground italic">No activity</span>
+                  ) : (
+                    Object.values(stablecoinStats).map(s => (
+                      <div key={s.symbol} className="flex justify-between items-center">
+                        <span className="font-semibold text-lg">{s.volume} {s.symbol}</span>
+                        <Badge variant="secondary" className="text-[10px] px-1 h-4">{s.count} txs</Badge>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
         <Card className="min-w-0 border-border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Transactions (24h)</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Transactions (24h)</CardTitle>
             <TrendUpIcon className="h-4 w-4 text-muted-foreground" weight="regular" />
           </CardHeader>
           <CardContent>
@@ -282,14 +426,15 @@ export function TransactionAnalytics() {
             ) : (
               <>
                 <div className="text-xl font-semibold">{stats.totalTransactions24h}</div>
-                <p className="text-xs text-muted-foreground">Live data</p>
+                <p className="text-xs text-muted-foreground">Native + Stablecoins</p>
               </>
             )}
           </CardContent>
         </Card>
+
         <Card className="min-w-0 border-border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Transaction Size</CardTitle>
+            <CardTitle className="text-sm font-medium">Native Avg Size</CardTitle>
             <CurrencyCircleDollarIcon className="h-4 w-4 text-muted-foreground" weight="regular" />
           </CardHeader>
           <CardContent>
@@ -300,19 +445,9 @@ export function TransactionAnalytics() {
                 <div className="text-xl font-semibold">
                   {stats.avgTransactionSize} {SYMBOL}
                 </div>
-                <p className="text-xs text-muted-foreground">Live calculation</p>
+                <p className="text-xs text-muted-foreground">Native token average</p>
               </>
             )}
-          </CardContent>
-        </Card>
-        <Card className="min-w-0 border-border shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
-            <CheckCircleIcon className="h-4 w-4 text-muted-foreground" weight="regular" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl font-semibold">{stats.successRate}%</div>
-            <p className="text-xs text-muted-foreground">High reliability</p>
           </CardContent>
         </Card>
       </div>
@@ -339,20 +474,25 @@ export function TransactionAnalytics() {
             ) : (
               <ChartContainer
                 config={{
-                  volume: {
-                    label: `Volume ${SYMBOL}`,
-                    color: 'hsl(var(--chart-1))'
+                  nativeVolume: {
+                    label: `Native (${SYMBOL})`,
+                    color: 'oklch(0.51 0.17 259.94)'
+                  },
+                  scVolume: {
+                    label: 'Stablecoins (Units)',
+                    color: 'oklch(0.63 0.17 140.24)'
                   }
                 }}
                 className="h-[300px]"
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={volumeData}>
-                    <CartesianGrid strokeDasharray="3 3" />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted-foreground) / 0.1)" />
                     <XAxis dataKey="date" />
                     <YAxis />
                     <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="volume" fill="var(--color-volume)" />
+                    <Bar dataKey="nativeVolume" fill="var(--color-nativeVolume)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="scVolume" fill="var(--color-scVolume)" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </ChartContainer>
@@ -490,7 +630,10 @@ export function TransactionAnalytics() {
                       </div>
                       <div className="text-right">
                         <p className="font-bold text-lg">
-                          {formatEther(tx.amount)} {SYMBOL}
+                          {(() => {
+                            const meta = tokenMetadata[tx.token.toLowerCase()];
+                            return `${formatUnits(tx.amount, meta?.decimals ?? 18)} ${meta?.symbol ?? ''}`;
+                          })()}
                         </p>
                         <Badge className={getStatusColor(tx.status)}>{tx.status.toUpperCase()}</Badge>
                       </div>
@@ -503,7 +646,10 @@ export function TransactionAnalytics() {
                       <div>
                         <p className="text-muted-foreground">Fee</p>
                         <p className="font-mono">
-                          {formatEther(tx.fee)} {SYMBOL}
+                          {(() => {
+                            const meta = tokenMetadata[tx.token.toLowerCase()];
+                            return `${formatUnits(tx.fee, meta?.decimals ?? 18)} ${meta?.symbol ?? ''}`;
+                          })()}
                         </p>
                       </div>
                       <div>

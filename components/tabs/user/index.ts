@@ -1,6 +1,5 @@
 export { OverviewTab } from './overview-tab'
-export { SendTab } from './send-tab'
-export { ReceiveTab } from './receive-tab'
 export { KYCTab } from './kyc-tab'
 export { ProfileTab } from './profile-tab'
 export { TransactionsTab } from './transactions-tab'
+export { TransferTab } from './transfer-tab'
